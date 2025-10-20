@@ -1,0 +1,58 @@
+{
+  "testCases": [
+    {
+      "section": "Admin Authentication",
+      "testId": "TC-ADMIN-001",
+      "testSuite": "Admin login with valid credentials",
+      "description": "Verify admin can login with valid credentials",
+      "page": "AdminLoginPage",
+      "testData": {
+        "email": "admin@xlm.com",
+        "password": "AdminPass123!"
+      },
+      "preconditions": [
+        "Admin is not logged in",
+        "Admin has valid account"
+      ],
+      "scenarios": [
+        "Navigate to admin login page",
+        "Enter admin email",
+        "Enter admin password",
+        "Click Login button"
+      ],
+      "expectedResults": [
+        "Admin is redirected to admin dashboard",
+        "Admin badge is visible",
+        "User menu shows admin name"
+      ]
+    },
+    {
+      "section": "User Management",
+      "testId": "TC-ADMIN-101",
+      "testSuite": "Add new user",
+      "description": "Verify admin can add new user",
+      "page": "UserManagementPage",
+      "testData": {
+        "name": "John Doe",
+        "email": "john.doe@xlm.com",
+        "role": "user",
+        "status": true
+      },
+      "preconditions": [
+        "Admin is logged in",
+        "Admin is on User Management page"
+      ],
+      "scenarios": [
+        "Click Add User button",
+        "Fill in user details",
+        "Select user role",
+        "Click Save button"
+      ],
+      "expectedResults": [
+        "Success message is displayed",
+        "New user appears in user list",
+        "User count increases by 1"
+      ]
+    }
+  ]
+}

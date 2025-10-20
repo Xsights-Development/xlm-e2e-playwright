@@ -1,0 +1,28 @@
+{
+  "validAdmins": [
+    {
+      "email": "admin@xlm.com",
+      "password": "AdminPass123!",
+      "expectedName": "Admin User",
+      "role": "admin"
+    },
+    {
+      "email": "superadmin@xlm.com",
+      "password": "SuperAdminPass123!",
+      "expectedName": "Super Admin",
+      "role": "superadmin"
+    }
+  ],
+  "invalidAdmins": [
+    {
+      "email": "notadmin@xlm.com",
+      "password": "WrongPass123",
+      "expectedError": "Invalid admin credentials"
+    },
+    {
+      "email": "admin@xlm.com",
+      "password": "",
+      "expectedError": "Password is required"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Playwright
+test-results/
+playwright-report/
+reports/
+.auth/
+
+# Test artifacts - mỗi app có folder riêng
+app/test-results/
+app/playwright-report/
+app/reports/
+app/screenshots/
+app/videos/
+
+admin/test-results/
+admin/playwright-report/
+admin/reports/
+admin/screenshots/
+admin/videos/
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/

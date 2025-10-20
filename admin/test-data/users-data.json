@@ -1,0 +1,30 @@
+{
+  "newUsers": [
+    {
+      "name": "John Doe",
+      "email": "john.doe@xlm.com",
+      "role": "user",
+      "status": true
+    },
+    {
+      "name": "Jane Smith",
+      "email": "jane.smith@xlm.com",
+      "role": "moderator",
+      "status": true
+    }
+  ],
+  "invalidUsers": [
+    {
+      "name": "",
+      "email": "invalid@xlm.com",
+      "role": "user",
+      "expectedError": "Name is required"
+    },
+    {
+      "name": "Test User",
+      "email": "invalid-email",
+      "role": "user",
+      "expectedError": "Invalid email format"
+    }
+  ]
+}
