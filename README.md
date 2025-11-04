@@ -1,129 +1,167 @@
 # XLM E2E Playwright Tests
 
-Automated E2E testing repository for XLM projects using Playwright.
+E2E automated tests for XLM projects (App & Admin) using Playwright.
 
-## 📁 Structure
+## 📚 Table of Contents
+
+- [Project Structure](#-project-structure)
+- [Prerequisites](#-prerequisites)
+- [Installation](#-installation)
+- [Running Tests](#-running-tests)
+- [Viewing Reports](#-viewing-reports)
+- [Test Tags](#-test-tags)
+- [Environments](#-environments)
+- [Available Scripts](#-available-scripts)
+- [Contributing](#-contributing)
+- [Contact](#-contact)
+
+## 📁 Project Structure
+
+The repository is organized into two main testing projects: `app` and `admin`.
+
 ```
 xlm-e2e-playwright/
-├── app/          # Tests for my-react-app
-├── admin/        # Tests for my-react-admin
-└── shared/       # Shared utilities
+└── tests/
+    ├── app/          # Tests for the main application
+    │   ├── specs/
+    │   ├── pages/
+    │   └── fixtures/
+    ├── admin/        # Tests for the admin panel
+    │   ├── specs/
+    │   ├── pages/
+    │   └── fixtures/
+    └── common/       # Shared utilities, helpers, and base pages
 ```
 
-## 🚀 Quick Start
+## ✔️ Prerequisites
 
-### Prerequisites
 - Node.js 18+
-- npm or yarn
+- npm
 
-### Installation
+## 🚀 Installation
+
+1.  **Install Dependencies:**
+    ```bash
+    npm install
+    ```
+
+2.  **Install Playwright Browsers:**
+    This command downloads the necessary browser binaries for Playwright.
+    ```bash
+    npm run install:browsers
+    ```
+
+## 🧪 Running Tests
+
+Tests can be run for the `app` or `admin` projects.
+
+### General Commands
+
+| Command                  | Description                                                 |
+| ------------------------ | ----------------------------------------------------------- |
+| `npm run test:app`       | Runs all tests for the **app**.                             |
+| `npm run test:admin`     | Runs all tests for the **admin** panel.                     |
+| `npm run test:all`       | Runs all tests for both `app` and `admin` sequentially.     |
+| `npm run test:all:smoke` | Runs only `@smoke` tests for both projects on staging.      |
+
+### UI, Headed, and Debug Modes
+
+-   **UI Mode:** `npm run test:app:ui` or `npm run test:admin:ui`
+    -   Opens the Playwright Test UI for an interactive testing experience.
+
+-   **Headed Mode:** `npm run test:app:headed` or `npm run test:admin:headed`
+    -   Runs tests with the browser window visible.
+
+-   **Debug Mode:** `npm run test:app:debug` or `npm run test:admin:debug`
+    -   Runs tests in debug mode for step-by-step inspection.
+
+### Environment-Specific Testing
+
+You can target different environments (`local`, `staging`, `prod`).
+
+-   **Local:**
+    -   `npm run test:app:local`
+    -   `npm run test:admin:local`
+
+-   **Staging:**
+    -   `npm run test:app:staging`
+    -   `npm run test:admin:staging`
+    -   `npm run test:app:staging:smoke` (runs only `@smoke` tests)
+    -   `npm run test:admin:staging:smoke` (runs only `@smoke` tests)
+
+-   **Production:**
+    -   `npm run test:app:prod` (runs only `@smoke` tests)
+    -   `npm run test:admin:prod` (runs only `@smoke` tests)
+
+## 📊 Viewing Reports
+
+After a test run, an HTML report is generated in `tests/reports/html/`.
+
+To open the latest report for a specific project, use:
 ```bash
-# Install dependencies
-npm install
+# View app test report
+npm run test:app:report
 
-# Install Playwright browsers
-npm run install:browsers
-```
-
-### Running Tests
-
-#### App Tests
-```bash
-# Run all app tests
-npm run test:app
-
-# Run with UI mode
-npm run test:app:ui
-
-# Run on specific environment
-npm run test:app:local
-npm run test:app:staging
-npm run test:app:prod
-```
-
-#### Admin Tests
-```bash
-# Run all admin tests
-npm run test:admin
-
-# Run with UI mode
-npm run test:admin:ui
-
-# Run on specific environment
-npm run test:admin:local
-npm run test:admin:staging
-npm run test:admin:prod
-```
-
-#### Run Both
-```bash
-# Run all tests (app + admin)
-npm run test:all
-
-# Run smoke tests only
-npm run test:all:smoke
-```
-
-## 📝 Converting Manual Tests
-```bash
-# Convert app manual tests
-npm run convert:app
-
-# Convert admin manual tests
-npm run convert:admin
+# View admin test report
+npm run test:admin:report
 ```
 
 ## 🏷️ Test Tags
 
-- `@smoke` - Critical flows (runs on all environments including production)
-- `@regression` - Full regression tests (local & staging only)
-- `@local` - Local environment only
-- `@staging` - Staging environment only
-- `@production` - Production-safe tests
-- `@app` - App-specific tests
-- `@admin` - Admin-specific tests
+Use tags to categorize and selectively run tests.
+
+-   `@smoke` - Critical flows suitable for running in any environment, including production.
+-   `@regression` - Full regression suite, typically run on `local` and `staging`.
+-   `@app` - App-specific tests.
+-   `@admin` - Admin-specific tests.
 
 ## 🌍 Environments
 
-- **local** - http://localhost:3000 (app), http://localhost:4000 (admin)
-- **staging** - https://app-staging.xlm.com, https://admin-staging.xlm.com
-- **prod** - https://app.xlm.com, https://admin.xlm.com
+The tests are configured to run against the following base URLs:
 
-## 📊 Reports
+| Environment | App URL                  | Admin URL                   |
+| ----------- | ------------------------ | --------------------------- |
+| **local**   | `http://localhost:3000`  | `http://localhost:4000`     |
+| **staging** | `https://app-staging.xlm.com` | `https://admin-staging.xlm.com` |
+| **prod**    | `https://app.xlm.com`    | `https://admin.xlm.com`     |
 
-Test reports are generated in:
-- `app/reports/` - App test reports
-- `admin/reports/` - Admin test reports
+## 📜 Available Scripts
 
-View reports:
-```bash
-npm run test:app:report
-npm run test:admin:report
-```
+Here is a summary of all available scripts from `package.json`:
 
-## 🧹 Cleaning
-```bash
-# Clean all test artifacts
-npm run clean
-
-# Clean app artifacts only
-npm run clean:app
-
-# Clean admin artifacts only
-npm run clean:admin
-```
-
-## 📖 Documentation
-
-- [App Tests README](./app/README.md)
-- [Admin Tests README](./admin/README.md)
+| Script                        | Description                                           |
+| ----------------------------- | ----------------------------------------------------- |
+| `test:app`                    | Run all app tests.                                    |
+| `test:app:ui`                 | Run app tests in UI mode.                             |
+| `test:app:headed`             | Run app tests in headed mode.                         |
+| `test:app:debug`              | Run app tests in debug mode.                          |
+| `test:app:report`             | Show the latest app test report.                      |
+| `test:app:local`              | Run app tests on the local environment.               |
+| `test:app:staging`            | Run app tests on the staging environment.             |
+| `test:app:staging:smoke`      | Run app smoke tests on staging.                       |
+| `test:app:prod`               | Run app smoke tests on production.                    |
+| `test:admin`                  | Run all admin tests.                                  |
+| `test:admin:ui`               | Run admin tests in UI mode.                           |
+| `test:admin:headed`           | Run admin tests in headed mode.                       |
+| `test:admin:debug`            | Run admin tests in debug mode.                        |
+| `test:admin:report`           | Show the latest admin test report.                    |
+| `test:admin:local`            | Run admin tests on the local environment.             |
+| `test:admin:staging`          | Run admin tests on the staging environment.           |
+| `test:admin:staging:smoke`    | Run admin smoke tests on staging.                     |
+| `test:admin:prod`             | Run admin smoke tests on production.                  |
+| `test:all`                    | Run all tests for both app and admin.                 |
+| `test:all:smoke`              | Run smoke tests for both app and admin on staging.    |
+| `clean`                       | Remove all test artifacts.                            |
+| `clean:app`                   | Remove app-specific test artifacts.                   |
+| `clean:admin`                 | Remove admin-specific test artifacts.                 |
+| `install:browsers`            | Install Playwright browser binaries.                  |
 
 ## 🤝 Contributing
 
-1. Create feature branch
-2. Write tests
-3. Run tests locally
-4. Create PR
+1.  Create a new feature branch from `main`.
+2.  Add or update tests as needed.
+3.  Ensure all tests pass locally.
+4.  Create a Pull Request.
 
 ## 📧 Contact
 

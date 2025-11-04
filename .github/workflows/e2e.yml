@@ -1,0 +1,76 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  repository_dispatch:
+    types: [run_e2e_tests]
+  workflow_dispatch: # cho phép run thủ công
+
+jobs:
+  test_app:
+    name: App E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Playwright tests (App)
+        run: npx playwright test tests/app --reporter=html
+        continue-on-error: true  # để job không dừng nếu fail
+
+      - name: Upload report (App)
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-report
+          path: playwright-report
+          retention-days: 7
+
+      - name: Slack Notify (App)
+        if: always()
+        run: node scripts/notifySlack.js app ${{ job.status }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  test_admin:
+    name: Admin E2E Tests
+    runs-on: ubuntu-latest
+    needs: [test_app]  # hoặc bỏ nếu muốn chạy song song
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Playwright tests (Admin)
+        run: npx playwright test tests/admin --reporter=html
+        continue-on-error: true
+
+      - name: Upload report (Admin)
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-report
+          path: playwright-report
+          retention-days: 7
+
+      - name: Slack Notify (Admin)
+        if: always()
+        run: node scripts/notifySlack.js admin ${{ job.status }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

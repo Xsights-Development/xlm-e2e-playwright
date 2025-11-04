@@ -1,44 +1,31 @@
-# Dependencies
+# Node
 node_modules/
 package-lock.json
-
-# Playwright
-test-results/
-playwright-report/
-reports/
-.auth/
-
-# Test artifacts - mỗi app có folder riêng
-app/test-results/
-app/playwright-report/
-app/reports/
-app/screenshots/
-app/videos/
-
-admin/test-results/
-admin/playwright-report/
-admin/reports/
-admin/screenshots/
-admin/videos/
+pnpm-lock.yaml
+yarn.lock
 
 # Environment
 .env
-.env.local
 .env.*.local
-*.env
 
-# OS
-.DS_Store
-Thumbs.db
-*.log
+# Playwright
+tests/reports/
+playwright-report/
+*.zip
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 
-# Temporary files
-tmp/
-temp/
+# MacOS
+.DS_Store

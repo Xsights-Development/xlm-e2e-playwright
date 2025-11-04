@@ -1,40 +1,27 @@
 {
   "name": "xlm-e2e-playwright",
   "version": "1.0.0",
-  "description": "E2E automated tests for XLM projects (App & Admin) using Playwright",
-  "main": "index.js",
   "private": true,
+  "description": "E2E automated tests for XLM projects (App & Admin) using Playwright",
   "scripts": {
-    "test": "echo \"Please specify: npm run test:app or npm run test:admin\"",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
 
-    "test:app": "cd app && playwright test",
-    "test:app:ui": "cd app && playwright test --ui",
-    "test:app:headed": "cd app && playwright test --headed",
-    "test:app:debug": "cd app && playwright test --debug",
-    "test:app:report": "cd app && playwright show-report",
-    "test:app:local": "cd app && BASE_URL=http://localhost:3000 playwright test",
-    "test:app:staging": "cd app && TEST_ENV=staging playwright test",
-    "test:app:staging:smoke": "cd app && TEST_ENV=staging playwright test --grep @smoke",
-    "test:app:prod": "cd app && TEST_ENV=prod playwright test --grep @smoke",
+    "test:app": "playwright test --project=app",
+    "test:admin": "playwright test --project=admin",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:app:smoke": "playwright test --project=app --grep @smoke",
+    "test:admin:smoke": "playwright test --project=admin --grep @smoke",
 
-    "test:admin": "cd admin && playwright test",
-    "test:admin:ui": "cd admin && playwright test --ui",
-    "test:admin:headed": "cd admin && playwright test --headed",
-    "test:admin:debug": "cd admin && playwright test --debug",
-    "test:admin:report": "cd admin && playwright show-report",
-    "test:admin:local": "cd admin && BASE_URL=http://localhost:4000 playwright test",
-    "test:admin:staging": "cd admin && TEST_ENV=staging playwright test",
-    "test:admin:staging:smoke": "cd admin && TEST_ENV=staging playwright test --grep @smoke",
-    "test:admin:prod": "cd admin && TEST_ENV=prod playwright test --grep @smoke",
-
-    "test:all": "npm run test:app && npm run test:admin",
-    "test:all:smoke": "npm run test:app:staging:smoke && npm run test:admin:staging:smoke",
-    "clean": "rm -rf app/test-results app/playwright-report app/reports app/screenshots && rm -rf admin/test-results admin/playwright-report admin/reports admin/screenshots",
-    "clean:app": "rm -rf app/test-results app/playwright-report app/reports app/screenshots",
-    "clean:admin": "rm -rf admin/test-results admin/playwright-report admin/reports admin/screenshots",
-    "convert:app": "node app/scripts/convert-manual-tests.js",
-    "convert:admin": "node admin/scripts/convert-manual-tests.js",
+    "clean": "rm -rf playwright-report test-results reports",
     "install:browsers": "npx playwright install"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "dotenv": "^17.2.3"
   },
   "keywords": [
     "xlm",
@@ -43,10 +30,5 @@
     "testing",
     "automation"
   ],
-  "author": "XLM Team",
-  "license": "ISC",
-  "devDependencies": {
-    "@playwright/test": "^1.56.1",
-    "dotenv": "^17.2.3"
-  }
+  "author": "XLM Team"
 }
