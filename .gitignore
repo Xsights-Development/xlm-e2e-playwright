@@ -8,10 +8,18 @@ yarn.lock
 .env
 .env.*.local
 
+# Credentials (keep sensitive data out of git)
+tests/shared/data/admin-credentials.json
+
 # Playwright
 tests/reports/
 playwright-report/
+test-results/
 *.zip
+
+# Allure
+allure-results/
+allure-report/
 
 # Logs
 npm-debug.log*

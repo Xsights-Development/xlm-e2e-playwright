@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv:*)",
+      "Bash(git add:*)",
+      "Bash(tree:*)",
+      "Bash(git mv:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(npm install:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

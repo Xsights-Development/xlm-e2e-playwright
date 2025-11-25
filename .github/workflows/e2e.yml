@@ -27,7 +27,7 @@ jobs:
 
       - name: Run Playwright tests (App)
         run: npx playwright test tests/app --reporter=html
-        continue-on-error: true  # để job không dừng nếu fail
+        continue-on-error: true
 
       - name: Upload report (App)
         uses: actions/upload-artifact@v4
