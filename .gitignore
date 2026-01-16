@@ -15,12 +15,6 @@ app/reports/
 app/screenshots/
 app/videos/
 
-admin/test-results/
-admin/playwright-report/
-admin/reports/
-admin/screenshots/
-admin/videos/
-
 # Environment
 .env
 .env.local

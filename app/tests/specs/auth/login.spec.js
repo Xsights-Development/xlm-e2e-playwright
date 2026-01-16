@@ -4,14 +4,14 @@ const { test, expect } = require('../../fixtures/app-fixture');
 /**
  * TEST SUITE: Login Functionality - APP
  * SECTION: Authentication
- * 
- * Manual Test Cases được convert:
- * - Test ID: TC-APP-001, TC-APP-002
+ *
+ * Test Cases:
+ * - Test ID: TC-APP-001, TC-APP-002, TC-APP-003, TC-APP-004
  */
 
 test.describe('App Login Module @app @auth', () => {
-  
-  // Pre-condition: Navigate to login page trước mỗi test
+
+  // Pre-condition: Navigate to login page before each test
   test.beforeEach(async ({ loginPage }) => {
     console.log('📝 Setting up test: Navigating to login page');
     await loginPage.goto();
@@ -19,11 +19,11 @@ test.describe('App Login Module @app @auth', () => {
 
   /**
    * TEST CASE: TC-APP-001
-   * Scenario: User login với valid credentials
-   * Expected Result: 
-   * - User được redirect đến dashboard
-   * - Welcome message hiển thị
-   * 
+   * Scenario: User login with valid credentials
+   * Expected Result:
+   * - User is redirected to dashboard
+   * - Welcome message is displayed
+   *
    * Tags: @smoke @all
    */
   test('TC-APP-001: Login with valid credentials @smoke @all', async ({ 
@@ -68,11 +68,11 @@ test.describe('App Login Module @app @auth', () => {
 
   /**
    * TEST CASE: TC-APP-002
-   * Scenario: User login với invalid credentials
+   * Scenario: User login with invalid credentials
    * Expected Result:
-   * - Error message hiển thị
-   * - User vẫn ở login page
-   * 
+   * - Error message is displayed
+   * - User remains on login page
+   *
    * Tags: @regression @local @staging
    */
   test('TC-APP-002: Login with invalid credentials @regression @local @staging', async ({ 
@@ -117,7 +117,7 @@ test.describe('App Login Module @app @auth', () => {
 
   /**
    * TEST CASE: TC-APP-003
-   * Scenario: Login với empty password
+   * Scenario: Login with empty password
    */
   test('TC-APP-003: Login with empty password @regression @local @staging', async ({ 
     loginPage, 
@@ -143,7 +143,7 @@ test.describe('App Login Module @app @auth', () => {
 
   /**
    * TEST CASE: TC-APP-004
-   * Scenario: Login với empty email
+   * Scenario: Login with empty email
    */
   test('TC-APP-004: Login with empty email @regression @local @staging', async ({ 
     loginPage, 
