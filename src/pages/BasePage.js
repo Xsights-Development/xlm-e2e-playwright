@@ -14,7 +14,6 @@ class BasePage {
     // If URL starts with '/', prepend base URL
     const fullURL = url.startsWith('/') ? `${this.baseURL}${url}` : url;
     await this.page.goto(fullURL);
-    console.log(`   ✓ Navigated to: ${fullURL}`);
   }
 
   /**

@@ -1,4 +1,3 @@
-// app/tests/pages/LoginPage.js
 const { BasePage } = require('./BasePage');
 
 /**

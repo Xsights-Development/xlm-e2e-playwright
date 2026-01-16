@@ -1,4 +1,3 @@
-// app/tests/pages/DashboardPage.js
 const { BasePage } = require('./BasePage');
 
 /**

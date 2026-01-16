@@ -1,9 +1,10 @@
+require('dotenv').config();
 /**
  * Test Configuration
  * Centralized test data loaded from environment variables
  *
  * Usage:
- *   const testConfig = require('../../shared/utils/test-config');
+ *   const testConfig = require('../config/test-config');
  *   console.log(testConfig.credentials.username);
  *   console.log(testConfig.organization.tenant);
  *   console.log(testConfig.location.name);
@@ -18,17 +19,16 @@
  *   - APP_LOCATION_IDENTIFIER: Location identifier/code
  */
 
-require('dotenv').config();
-
+const prefix = 'APP';
 // Required environment variables
 const REQUIRED_ENV_VARS = [
-  'APP_USER',
-  'APP_PASS',
-  'APP_TENANT',
-  'APP_FARM',
-  'APP_LOCATION_CATEGORY',
-  'APP_LOCATION_NAME',
-  'APP_LOCATION_IDENTIFIER'
+  `${prefix}_USER`,
+  `${prefix}_PASS`,
+  `${prefix}_TENANT`,
+  `${prefix}_FARM`,
+  `${prefix}_LOCATION_CATEGORY`,
+  `${prefix}_LOCATION_NAME`,
+  `${prefix}LOCATION_IDENTIFIER`
 ];
 
 /**

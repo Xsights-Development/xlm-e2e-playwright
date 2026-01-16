@@ -29,13 +29,16 @@ test.describe('App Login Module @app @auth', () => {
   test('TC-APP-001: Login with valid credentials @smoke @all', async ({ 
     loginPage, 
     dashboardPage, 
-    testData, 
+    testConfig,
     page 
   }) => {
     console.log('🧪 Test: Login with valid credentials');
     
     // Arrange - Test Data
-    const validUser = testData.validUsers[0];
+    const validUser = {
+      email: testConfig.credentials.username,
+      password: testConfig.credentials.password
+    }
     console.log(`   Using user: ${validUser.email}`);
 
     // Act - Scenarios
@@ -77,13 +80,16 @@ test.describe('App Login Module @app @auth', () => {
    */
   test('TC-APP-002: Login with invalid credentials @regression @local @staging', async ({ 
     loginPage, 
-    testData, 
     page 
   }) => {
     console.log('🧪 Test: Login with invalid credentials');
     
     // Arrange
-    const invalidUser = testData.invalidUsers[0];
+    const invalidUser = {
+      email: 'invalid@example.com',
+      password: 'wrongpassword'
+    };
+
     console.log(`   Using invalid user: ${invalidUser.email}`);
 
     // Act
@@ -121,12 +127,15 @@ test.describe('App Login Module @app @auth', () => {
    */
   test('TC-APP-003: Login with empty password @regression @local @staging', async ({ 
     loginPage, 
-    testData, 
+    testConfig,
     page 
   }) => {
     console.log('🧪 Test: Login with empty password');
     
-    const userWithEmptyPass = testData.invalidUsers[1];
+    const userWithEmptyPass = {
+      email: testConfig.credentials.username,
+      password: '' // Empty password
+    };
 
     await loginPage.fillEmail(userWithEmptyPass.email);
     await loginPage.fillPassword(userWithEmptyPass.password);
@@ -147,12 +156,14 @@ test.describe('App Login Module @app @auth', () => {
    */
   test('TC-APP-004: Login with empty email @regression @local @staging', async ({ 
     loginPage, 
-    testData, 
     page 
   }) => {
     console.log('🧪 Test: Login with empty email');
     
-    const userWithEmptyEmail = testData.invalidUsers[2];
+    const userWithEmptyEmail = {
+      email: '',
+      password: 'somepassword'
+    }
 
     await loginPage.fillEmail(userWithEmptyEmail.email);
     await loginPage.fillPassword(userWithEmptyEmail.password);

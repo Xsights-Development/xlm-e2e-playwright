@@ -1,8 +1,7 @@
-// app/tests/fixtures/app-fixture.js
 const base = require('@playwright/test');
 const { LoginPage } = require('../pages/LoginPage');
 const { DashboardPage } = require('../pages/DashboardPage');
-const testConfig = require('../../../shared/utils/test-config');
+const testConfig = require('../config/test-config');
 
 console.log('📦 Loaded test configuration from environment variables');
 
@@ -23,37 +22,6 @@ exports.test = base.test.extend({
   dashboardPage: async ({ page }, use) => {
     const dashboardPage = new DashboardPage(page);
     await use(dashboardPage);
-  },
-
-  /**
-   * Fixture: Test Data
-   * Provides authentication test data
-   * Valid user credentials are loaded from environment variables
-   */
-  testData: async ({}, use) => {
-    const data = {
-      validUsers: [
-        {
-          email: testConfig.credentials.username,
-          password: testConfig.credentials.password
-        }
-      ],
-      invalidUsers: [
-        {
-          email: 'invalid@example.com',
-          password: 'wrongpassword'
-        },
-        {
-          email: testConfig.credentials.username,
-          password: '' // Empty password
-        },
-        {
-          email: '',
-          password: 'somepassword'
-        }
-      ]
-    };
-    await use(data);
   },
 
   /**

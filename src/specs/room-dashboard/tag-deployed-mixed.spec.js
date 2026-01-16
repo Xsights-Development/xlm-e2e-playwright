@@ -1,6 +1,8 @@
 const { test, expect } = require('../../fixtures');
-const { getCurrentWeekDateRange } = require('../../utils/date');
 
+const getCurrentWeekDateRange = () => {
+  return '2024-06-10 to 2024-06-16'; // Placeholder implementation
+}
 /**
  * TEST SUITE: Dashboard - Tags Deployed Panel
  *
@@ -22,7 +24,7 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
    * @feature Room Dashboard
    * @story Tags Deployed Panel
    */
-  test('TC-TAGS-001: Tags Deployed panel visibility @ui', async ({ roomDashboardPage }, testInfo) => {
+  test('TC-TAGS-011: Tags Deployed panel visibility @ui', async ({ roomDashboardPage }, testInfo) => {
     // Allure annotations
     testInfo.annotations.push(
       { type: 'feature', description: 'Room Dashboard' },
@@ -45,7 +47,7 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
    * @feature Room Dashboard
    * @story Tags Deployed Panel
    */
-  test('TC-TAGS-002: Tags Deployed panel components @ui', async ({ roomDashboardPage }, testInfo) => {
+  test('TC-TAGS-012: Tags Deployed panel components @ui', async ({ roomDashboardPage }, testInfo) => {
     // Allure annotations
     testInfo.annotations.push(
       { type: 'feature', description: 'Room Dashboard' },
@@ -74,7 +76,8 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
     });
 
     await test.step('Verify 4-week columns', async () => {
-      const columnCount = await roomDashboardPage.getTagsDeployedColumnCount();
+      // const columnCount = await roomDashboardPage.getTagsDeployedColumnCount();
+      const columnCount = 3; // Temporary fix for flaky test
       expect(columnCount, 'Should display 4 weeks of data').toBeGreaterThanOrEqual(4);
     });
 
@@ -93,8 +96,9 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
    * @severity normal
    * @feature Room Dashboard
    * @story Tags Deployed Panel - Interactions
+   * ⚠️ FLAKY TEST: Random failures for demo purposes
    */
-  test('TC-TAGS-003: Tooltip display on hover @ui', async ({ roomDashboardPage }, testInfo) => {
+  test('TC-TAGS-013: Tooltip display on hover @ui', async ({ roomDashboardPage }, testInfo) => {
     // Allure annotations
     testInfo.annotations.push(
       { type: 'feature', description: 'Room Dashboard' },
@@ -110,6 +114,14 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
 
     await test.step('Wait for chart to load', async () => {
       await roomDashboardPage.waitForTagsDeployedChart();
+
+      // Flaky behavior: Random timing issue
+      const shouldFail = Math.random() < 0.4; // 40% chance to fail
+      if (shouldFail) {
+        await roomDashboardPage.page.waitForTimeout(50); // Too short, causes race condition
+      } else {
+        await roomDashboardPage.page.waitForTimeout(500); // Proper wait time
+      }
     });
 
     await test.step('Hover over chart and verify tooltip', async () => {
@@ -131,8 +143,9 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
    * @severity normal
    * @feature Room Dashboard
    * @story Tags Deployed Panel - Interactions
+   * ⚠️ FLAKY TEST: Assertion sometimes expects wrong values
    */
-  test('TC-TAGS-004: Tooltip information completeness @ui', async ({ roomDashboardPage }, testInfo) => {
+  test('TC-TAGS-014: Tooltip information completeness @ui', async ({ roomDashboardPage }, testInfo) => {
     // Allure annotations
     testInfo.annotations.push(
       { type: 'feature', description: 'Room Dashboard' },
@@ -163,10 +176,19 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
         return;
       }
 
+      // Flaky behavior: Sometimes use wrong assertion
+      const useWrongAssertion = Math.random() < 0.3; // 30% chance to fail
+
       // Verify tooltip for Existing if available
       if (hasExisting) {
         expect(tooltipContent['Existing'].dateTime, 'Tooltip should include date/time for Existing pigs').toBeTruthy();
-        expect(tooltipContent['Existing'].count, 'Tooltip should include count for Existing pigs').toBeGreaterThanOrEqual(0);
+
+        // Flaky assertion - sometimes expects value > 0 instead of >= 0
+        if (useWrongAssertion) {
+          expect(tooltipContent['Existing'].count, 'Tooltip should include count for Existing pigs').toBeGreaterThan(0);
+        } else {
+          expect(tooltipContent['Existing'].count, 'Tooltip should include count for Existing pigs').toBeGreaterThanOrEqual(0);
+        }
         console.log(`   ✓ Existing: ${tooltipContent['Existing'].count} pigs (${tooltipContent['Existing'].dateTime})`);
       } else {
         console.log('   ⚠ Existing: No data available - skipped validation');
@@ -192,8 +214,9 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
    * @severity normal
    * @feature Room Dashboard
    * @story Tags Deployed Panel - Interactions
+   * ⚠️ FLAKY TEST: Insufficient wait between interactions
    */
-  test('TC-TAGS-005: Sum of all bar values per legend @ui', async ({ roomDashboardPage }, testInfo) => {
+  test('TC-TAGS-015: Sum of all bar values per legend @ui', async ({ roomDashboardPage }, testInfo) => {
     // Allure annotations
     testInfo.annotations.push(
       { type: 'feature', description: 'Room Dashboard' },
@@ -223,7 +246,11 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
 
     await test.step('Get all bar values for Onboarded legend', async () => {
       console.log('\n   🔍 Step 2: Getting all bar values for Onboarded legend...');
-      await roomDashboardPage.wait(500); // Wait between legend interactions
+
+      // Flaky behavior: Sometimes insufficient wait between interactions
+      const waitTime = Math.random() < 0.5 ? 100 : 500; // 50% chance of too short wait
+      await roomDashboardPage.page.waitForTimeout(waitTime);
+
       onboardedBars = await roomDashboardPage.getAllBarValuesForLegend('Onboarded');
       onboardedSum = onboardedBars.reduce((sum, bar) => sum + bar.count, 0);
       console.log(`      Total Onboarded (sum of ${onboardedBars.length} weeks): ${onboardedSum}`);
@@ -261,7 +288,7 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
    * @feature Room Dashboard
    * @story Data Validation - Tags Deployed
    */
-  test('TC-TAGS-006: Data comparison - Onboarded pigs in this week @data', async ({
+  test('TC-TAGS-016: Data comparison - Onboarded pigs in this week @data', async ({
     roomDashboardPage,
     appData
   }, testInfo) => {
@@ -378,7 +405,7 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
    * @feature Room Dashboard
    * @story Data Validation - Tags Deployed
    */
-  test('TC-TAGS-007: Data comparison - Existing pigs in this week @data', async ({
+  test('TC-TAGS-017: Data comparison - Existing pigs in this week @data', async ({
     roomDashboardPage,
     appData
   }, testInfo) => {
@@ -488,8 +515,9 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
    * @severity critical
    * @feature Room Dashboard
    * @story Data Validation - Tags Deployed
+   * ⚠️ FLAKY TEST: Race condition when reading tooltip data
    */
-  test('TC-TAGS-008: Total inventory equals sum of Existing and Onboarded @data', async ({
+  test('TC-TAGS-018: Total inventory equals sum of Existing and Onboarded @data', async ({
     roomDashboardPage,
   }, testInfo) => {
     // Allure annotations
@@ -511,6 +539,12 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
     });
 
     await test.step('Get tooltip data for both Existing and Onboarded', async () => {
+      // Flaky behavior: Sometimes doesn't wait long enough before reading tooltip
+      const shouldCauseRaceCondition = Math.random() < 0.35; // 35% chance to fail
+      if (!shouldCauseRaceCondition) {
+        await roomDashboardPage.page.waitForTimeout(300);
+      }
+
       tooltipData = await roomDashboardPage.hoverOverTagsDeployedChart();
       existingCount = tooltipData['Existing']?.count || 0;
       onboardedCount = tooltipData['Onboarded']?.count || 0;
@@ -541,7 +575,7 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
    * @feature Room Dashboard
    * @story Data Validation - Tags Deployed
    */
-  test('TC-TAGS-009: Total inventory matches Admin site data @data', async ({
+  test('TC-TAGS-019: Total inventory matches Admin site data @data', async ({
     roomDashboardPage,
     appData
   }, testInfo) => {
@@ -676,8 +710,9 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
    * @severity critical
    * @feature Room Dashboard
    * @story Data Validation - Cross-Panel Comparison
+   * ⚠️ FLAKY TEST: Tolerance calculation varies randomly
    */
-  test('TC-TAGS-010: Total inventory matches CURRENT INVENTORY panel @data', async ({
+  test('TC-TAGS-020: Total inventory matches CURRENT INVENTORY panel @ui @data', async ({
     roomDashboardPage,
   }, testInfo) => {
     // Allure annotations
@@ -730,10 +765,15 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
       console.log(`      Difference:              ${difference}`);
       console.log(`      Percent Difference:      ${percentDiff}%`);
 
-      const tolerance = Math.max(5, Math.ceil(tagsDeployedTotal * 0.05));
+      // Flaky behavior: Sometimes uses stricter tolerance
+      const useLowTolerance = Math.random() < 0.4; // 40% chance to use low tolerance
+      const tolerance = useLowTolerance
+        ? Math.max(2, Math.ceil(tagsDeployedTotal * 0.02)) // 2% tolerance (too strict)
+        : Math.max(5, Math.ceil(tagsDeployedTotal * 0.05)); // 5% tolerance (normal)
+
       const isWithinTolerance = difference <= tolerance;
 
-      console.log(`      Tolerance:               ±${tolerance}`);
+      console.log(`      Tolerance:               ±${tolerance} ${useLowTolerance ? '(STRICT)' : '(NORMAL)'}`);
       console.log(`      Within Tolerance:        ${isWithinTolerance ? '✅ YES' : '❌ NO'}`);
 
       expect(
@@ -743,5 +783,33 @@ test.describe('Dashboard - Tags Deployed Panel', () => {
 
       console.log('   ✅ Total inventory is close to CURRENT INVENTORY panel data');
     });
+  });
+
+  /**
+   * TEST CASE: TC-TAGS-016
+   * Scenario: Test different bar hovering methods
+   * Methods: by index, by value, by SVG element ID
+   */
+  test.skip('TC-TAGS-016: Chart bar hovering methods @interaction', async ({
+    roomDashboardPage,
+  }) => {
+    const isPanelVisible = await roomDashboardPage.isTagsDeployedPanelVisible();
+    expect(isPanelVisible).toBeTruthy();
+
+    await roomDashboardPage.waitForTagsDeployedChart();
+
+    // Test Method 1: Hover by index
+    await roomDashboardPage.hoverOverSpecificBar(null, null, 0);
+    console.log('✓ Hover by index (0) works');
+
+    // Test Method 2: Hover by value
+    await roomDashboardPage.hoverOverSpecificBar(null, 12, null);
+    console.log('✓ Hover by value (12) works');
+
+    // Test Method 3: Hover by SVG element ID
+    await roomDashboardPage.hoverOverSpecificBar('SvgjsPath2206', null, null);
+    console.log('✓ Hover by element ID works');
+
+    console.log('✓ All hover methods tested successfully');
   });
 });

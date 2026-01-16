@@ -1,7 +1,7 @@
 // app/tests/utils/helpers.js
 
-const { randomEmail, randomString } = require('../../../shared/utils/string-helpers');
-const { getCurrentTimestamp } = require('../../../shared/utils/date-helpers');
+const { randomEmail, randomString } = require('./string-helpers');
+const { getCurrentTimestamp } = require('./date-helpers');
 
 /**
  * Helper functions specific to App tests

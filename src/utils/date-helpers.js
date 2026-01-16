@@ -1,5 +1,3 @@
-// shared/utils/date-helpers.js
-
 /**
  * Date Helper Functions
  * Shared by all tests

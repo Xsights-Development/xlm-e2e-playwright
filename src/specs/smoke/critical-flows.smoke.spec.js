@@ -16,11 +16,14 @@ test.describe('App Critical Flows @smoke @app', () => {
     page,
     loginPage, 
     dashboardPage, 
-    testData 
+    testConfig 
   }) => {
     console.log('🔥 SMOKE TEST: Complete login flow');
     
-    const validUser = testData.validUsers[0];
+    const validUser = {
+      email: testConfig.credentials.username,
+      password: testConfig.credentials.password
+    };
     
     // Login
     await loginPage.goto();
