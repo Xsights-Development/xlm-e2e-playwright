@@ -1,5 +1,5 @@
 /**
- * Base Page Object cho App
+ * Base Page Object for App
  * Methods common to all pages
  */
 class BasePage {
@@ -11,7 +11,10 @@ class BasePage {
    * Navigate to a URL
    */
   async navigate(url) {
-    await this.page.goto(url);
+    // If URL starts with '/', prepend base URL
+    const fullURL = url.startsWith('/') ? `${this.baseURL}${url}` : url;
+    await this.page.goto(fullURL);
+    console.log(`   ✓ Navigated to: ${fullURL}`);
   }
 
   /**
@@ -29,7 +32,7 @@ class BasePage {
   }
 
   /**
-   * Click element với retry
+   * Click element with retry
    */
   async clickElement(selector, options = {}) {
     await this.page.click(selector, { 

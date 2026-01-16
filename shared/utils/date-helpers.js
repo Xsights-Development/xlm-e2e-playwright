@@ -2,7 +2,7 @@
 
 /**
  * Date Helper Functions
- * Dùng chung cho cả App và Admin tests
+ * Shared by all tests
  */
 
 /**

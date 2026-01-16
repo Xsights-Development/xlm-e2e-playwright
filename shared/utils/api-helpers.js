@@ -2,7 +2,7 @@
 
 /**
  * API Helper Functions
- * Useful for API testing hoặc setup/teardown test data
+ * Useful for API testing or setup/teardown test data
  */
 
 const https = require('https');

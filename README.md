@@ -6,7 +6,6 @@ Automated E2E testing repository for XLM projects using Playwright.
 ```
 xlm-e2e-playwright/
 ├── app/          # Tests for my-react-app
-├── admin/        # Tests for my-react-admin
 └── shared/       # Shared utilities
 ```
 
@@ -16,107 +15,114 @@ xlm-e2e-playwright/
 - Node.js 18+
 - npm or yarn
 
-### Installation
-```bash
-# Install dependencies
-npm install
+### Setup
 
-# Install Playwright browsers
+```bash
+# 1. Setup environment
+cp .env.example .env
+# Edit .env with your credentials
+
+# 2. Install dependencies
+npm install
 npm run install:browsers
 ```
 
+**Important:** Test configuration is loaded directly from `.env` file - no build step required!
+
+See [SETUP.md](SETUP.md) for detailed setup instructions.
+
 ### Running Tests
 
-#### App Tests
 ```bash
-# Run all app tests
-npm run test:app
+# Run all tests
+npm test
 
 # Run with UI mode
-npm run test:app:ui
+npm run test:ui
 
-# Run on specific environment
-npm run test:app:local
-npm run test:app:staging
-npm run test:app:prod
-```
+# Run with headed mode
+npm run test:headed
 
-#### Admin Tests
-```bash
-# Run all admin tests
-npm run test:admin
+# Run in debug mode
+npm run test:debug
 
-# Run with UI mode
-npm run test:admin:ui
+# Run specific test by tag
+npm run test:tc "TC-TAGS-001"
 
-# Run on specific environment
-npm run test:admin:local
-npm run test:admin:staging
-npm run test:admin:prod
-```
-
-#### Run Both
-```bash
-# Run all tests (app + admin)
-npm run test:all
-
-# Run smoke tests only
-npm run test:all:smoke
-```
-
-## 📝 Converting Manual Tests
-```bash
-# Convert app manual tests
-npm run convert:app
-
-# Convert admin manual tests
-npm run convert:admin
+# Show test report
+npm run test:report
 ```
 
 ## 🏷️ Test Tags
 
+- `@ui` - UI interaction tests
+- `@data` - Data validation tests
 - `@smoke` - Critical flows (runs on all environments including production)
 - `@regression` - Full regression tests (local & staging only)
-- `@local` - Local environment only
-- `@staging` - Staging environment only
-- `@production` - Production-safe tests
-- `@app` - App-specific tests
-- `@admin` - Admin-specific tests
 
 ## 🌍 Environments
 
-- **local** - http://localhost:3000 (app), http://localhost:4000 (admin)
-- **staging** - https://app-staging.xlm.com, https://admin-staging.xlm.com
-- **prod** - https://app.xlm.com, https://admin.xlm.com
+**Simple configuration - just use environment variables!**
+
+No need for separate config files per environment. Just set `APP_URL`:
+
+- **Local**: `APP_URL=http://localhost:3000` (in `.env` file)
+- **UAT/Staging**: `APP_URL=https://uat.yourdomain.com` (in CI/CD)
+- **Prod**: Skip testing (already tested in UAT)
+
+Other variables (credentials, test data) remain the same across environments.
 
 ## 📊 Reports
 
 Test reports are generated in:
-- `app/reports/` - App test reports
-- `admin/reports/` - Admin test reports
+- `reports/` - Test reports
 
 View reports:
 ```bash
-npm run test:app:report
-npm run test:admin:report
+npm run test:report
 ```
 
 ## 🧹 Cleaning
 ```bash
 # Clean all test artifacts
 npm run clean
-
-# Clean app artifacts only
-npm run clean:app
-
-# Clean admin artifacts only
-npm run clean:admin
 ```
+
+## 🔄 Test Data Flow
+
+```
+.env file → test-config.js → Tests
+```
+
+Test data is loaded directly from environment variables via `shared/utils/test-config.js`:
+
+**Environment Variables:**
+
+| ENV Variable | Description | Usage in Tests |
+|-------------|-------------|----------------|
+| `APP_USER` | User email/username | `testConfig.credentials.username` |
+| `APP_PASS` | User password | `testConfig.credentials.password` |
+| `APP_TENANT` | Tenant name | `testConfig.organization.tenant` |
+| `APP_FARM` | Farm name | `testConfig.organization.farm` |
+| `APP_LOCATION_CATEGORY` | Location category | `testConfig.location.category` |
+| `APP_LOCATION_NAME` | Location/barn name | `testConfig.location.name` |
+| `APP_LOCATION_IDENTIFIER` | Location identifier | `testConfig.location.identifier` |
+
+**Example usage in tests:**
+```javascript
+const testConfig = require('../../shared/utils/test-config');
+
+await loginPage.login(testConfig.credentials.username, testConfig.credentials.password);
+await loginPage.selectTenantAndWait(testConfig.organization.tenant);
+```
+
+⚠️ **Security:** The `.env` file is gitignored and contains credentials - **NEVER commit it**.
 
 ## 📖 Documentation
 
+- [SETUP.md](SETUP.md) - Local development setup
+- [CI-CD.md](CI-CD.md) - CI/CD configuration guide
 - [App Tests README](./app/README.md)
-- [Admin Tests README](./admin/README.md)
 
 ## 🤝 Contributing
 
