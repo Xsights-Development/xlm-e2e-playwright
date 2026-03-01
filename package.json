@@ -4,6 +4,7 @@
   "description": "E2E automated tests for XLM App using Playwright",
   "private": true,
   "scripts": {
+    "debug:admin-api": "tsx scripts/debug-admin-api.ts",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:ui": "playwright test --ui",
@@ -30,6 +31,7 @@
     "@playwright/test": "^1.56.1",
     "@types/node": "^25.0.10",
     "dotenv": "^17.2.3",
+    "tsx": "^4.19.2",
     "typescript": "^5.9.3"
   }
 }

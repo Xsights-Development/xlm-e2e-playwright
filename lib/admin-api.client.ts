@@ -33,7 +33,9 @@ export class AdminApiClient {
     });
     const body = (await res.json()) as AdminLoginResponse;
     if (!res.ok) {
-      throw new Error(`Admin API login failed (${res.status}): ${body.msg ?? res.statusText}`);
+      throw new Error(
+        `Admin API login failed (${res.status}): ${body.msg ?? res.statusText}. URL: ${url}. Check ADMIN_URL in .env (use base only, e.g. https://api.staging.xiot.com.au).`,
+      );
     }
     if (body.code !== 0 || body.status !== 0) {
       throw new Error(`Admin API login error: ${body.msg ?? 'unknown'}`);
@@ -84,6 +86,33 @@ export class AdminApiClient {
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`Admin API GET ${path} failed (${res.status}): ${text.slice(0, 200)}`);
+    }
+    return res.json() as Promise<T>;
+  }
+
+  /**
+   * POST request with Cookie: Authorization="bearer <access_token>".
+   * Use for list/search endpoints that return 405 for GET (e.g. AnimalAdmin/list).
+   * @param path - e.g. /admin/AnimalGroupAdmin/AnimalAdmin/list
+   * @param body - JSON body (e.g. { page: 1, perPage: 10, location__identifier, last_seen_at })
+   */
+  async post<T = unknown>(path: string, body?: Record<string, unknown>): Promise<T> {
+    if (!this.baseUrl) {
+      throw new Error('Admin API: ADMIN_URL is not set in .env');
+    }
+    const url = path.startsWith('http') ? path : `${this.baseUrl}${path}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Cookie: this.getCookieHeader(),
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Admin API POST ${path} failed (${res.status}): ${text.slice(0, 200)}`);
     }
     return res.json() as Promise<T>;
   }

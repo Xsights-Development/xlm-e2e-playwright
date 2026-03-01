@@ -12,6 +12,10 @@ export class OverviewPage extends BasePage {
   readonly tagsDeployedTitle: Locator;
   readonly inventoryTitle: Locator;
   readonly tagsDeployedChart: Locator;
+  readonly existingThisWeekCount: Locator;
+  readonly onboardedThisWeekCount: Locator;
+  readonly activeTagsXiotG: Locator;
+  readonly activeTagsXiotS: Locator;
   readonly barnsMenu: Locator;
   readonly barnsItem: Locator;
 
@@ -21,6 +25,10 @@ export class OverviewPage extends BasePage {
     this.tagsDeployedTitle = page.getByTestId('tags-deployed-title');
     this.inventoryTitle = page.getByTestId('inventory-title');
     this.tagsDeployedChart = page.getByTestId('tags-deployed-chart');
+    this.existingThisWeekCount = page.getByTestId('existing-this-week-count');
+    this.onboardedThisWeekCount = page.getByTestId('onboarded-this-week-count');
+    this.activeTagsXiotG = page.getByTestId('active-tags-xiot-g');
+    this.activeTagsXiotS = page.getByTestId('active-tags-xiot-s');
     this.barnsMenu = page.getByTestId('barns-menu');
     this.barnsItem = page.getByTestId('barns-item');
   }
@@ -99,5 +107,47 @@ export class OverviewPage extends BasePage {
   /** Tab names per 04-app-flows: Inventory, Health Status, Location Condition. */
   async getTabLocator(tabName: string): Promise<Locator> {
     return this.page.getByRole('tab', { name: tabName });
+  }
+
+  /**
+   * Returns the displayed "Existing" count for "This Week" from the Tags Deployed chart.
+   * Waits for the element to be visible and parses its text content as integer.
+   */
+  async getExistingThisWeekCount(): Promise<number> {
+    await this.existingThisWeekCount.waitFor({ state: 'visible', timeout: 15000 });
+    const text = await this.existingThisWeekCount.textContent();
+    const parsed = parseInt(text ?? '', 10);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  /**
+   * Returns the displayed "Onboarded" (New Tags Onboarded) count for "This Week" from the Tags Deployed chart.
+   * Waits for the element to be visible and parses its text content as integer.
+   */
+  async getOnboardedThisWeekCount(): Promise<number> {
+    await this.onboardedThisWeekCount.waitFor({ state: 'visible', timeout: 15000 });
+    const text = await this.onboardedThisWeekCount.textContent();
+    const parsed = parseInt(text ?? '', 10);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  /**
+   * Returns the total number of Active tags from the CURRENT INVENTORY panel (RoomStatistics).
+   * Sums active-tags-xiot-g and active-tags-xiot-s (one or both visible depending on type_of_pigs).
+   * Values may be locale-formatted (e.g. "1,016"); commas are stripped before parsing.
+   */
+  async getCurrentInventoryCount(): Promise<number> {
+    const either = this.activeTagsXiotG.or(this.activeTagsXiotS);
+    await either.first().waitFor({ state: 'visible', timeout: 15000 });
+    let total = 0;
+    for (const loc of [this.activeTagsXiotG, this.activeTagsXiotS]) {
+      const count = await loc.count();
+      if (count > 0) {
+        const text = await loc.first().textContent();
+        const parsed = parseInt((text ?? '').replace(/,/g, ''), 10);
+        if (!Number.isNaN(parsed)) total += parsed;
+      }
+    }
+    return total;
   }
 }

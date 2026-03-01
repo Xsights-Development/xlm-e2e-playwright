@@ -4,9 +4,11 @@
  * Login: POST /admin/auth/form/login/api → then call other APIs with Cookie: Authorization="bearer <token>"
  */
 
-const raw = process.env.ADMIN_URL ?? '';
+const raw = (process.env.ADMIN_URL ?? '').trim().replace(/\/+$/, '');
+// Avoid double /admin: if env is "https://host/admin", baseUrl becomes "https://host"
+const baseUrl = raw.replace(/\/admin\/?$/, '');
 export const ADMIN_API = {
-  baseUrl: raw.replace(/\/+$/, ''),
+  baseUrl,
   loginPath: '/admin/auth/form/login/api',
   get loginUrl(): string {
     return `${this.baseUrl}${this.loginPath}`;
