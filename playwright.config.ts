@@ -1,19 +1,11 @@
-// app/playwright.config.js
-const { defineConfig, devices } = require('@playwright/test');
-require('dotenv').config();
+import { defineConfig, devices } from '@playwright/test';
+import 'dotenv/config';
 
-/**
- * Playwright Configuration
- *
- * Environment Variables:
- * - APP_URL: Base URL for the app (default: http://localhost:3000)
- * - CI: Set to 'true' in CI/CD environment
- * - HEADED: Set to 'true' to run in headed mode (default: headless)
- */
-
-module.exports = defineConfig({
+export default defineConfig({
   testDir: './tests/specs',
-  outputDir: './test-results',
+  testMatch: /\.spec\.ts$/,
+  testIgnore: ['**/_legacy-js/**', '**/node_modules/**'],
+  outputDir: './results',
 
   // Timeouts
   timeout: 30 * 1000,
@@ -52,10 +44,5 @@ module.exports = defineConfig({
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    // Uncomment to test on Firefox
-    // {
-    //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
-    // },
   ],
 });

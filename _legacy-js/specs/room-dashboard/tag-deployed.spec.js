@@ -1,4 +1,4 @@
-const { test, expect } = require('../../fixtures');
+const { test, expect } = require('../../fixtures/base-fixture');
 
 const getCurrentWeekDateRange = () => {
   return '2024-06-10 to 2024-06-16'; // Placeholder implementation

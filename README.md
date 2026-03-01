@@ -60,6 +60,20 @@ npm run test:report
 - `@smoke` - Critical flows (runs on all environments including production)
 - `@regression` - Full regression tests (local & staging only)
 
+## Preconditions & fixtures
+
+Many test cases assume these preconditions:
+
+1. **Precondition 1:** User is logged in, tenant and farm are selected, and the app is on the dashboard (or "go to dashboard" page).
+2. **Precondition 2:** A location (barn/room) is selected so the app stays on the **Overview** page of that location.
+
+Use the auth fixtures from `@/fixtures/auth.fixture.js`:
+
+- **`authenticatedDashboard`** – Ensures precondition 1 only. Use when the test starts from the dashboard (e.g. testing navigation to Overview, or other dashboard flows).
+- **`authenticatedOnOverview`** – Ensures preconditions 1 and 2. Use when the test should start already on the Overview page of a location (e.g. testing Overview tabs, inventory, or room-level features).
+
+Optional env `APP_LOCATION_NAME` selects a specific location by name; if unset, the first barn in the list is selected.
+
 ## 🌍 Environments
 
 **Simple configuration - just use environment variables!**

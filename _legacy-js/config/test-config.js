@@ -28,7 +28,7 @@ const REQUIRED_ENV_VARS = [
   `${prefix}_FARM`,
   `${prefix}_LOCATION_CATEGORY`,
   `${prefix}_LOCATION_NAME`,
-  `${prefix}LOCATION_IDENTIFIER`
+  `${prefix}_LOCATION_IDENTIFIER`
 ];
 
 /**

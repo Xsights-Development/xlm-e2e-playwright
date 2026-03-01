@@ -1,5 +1,5 @@
 // app/tests/specs/auth/login.spec.js
-const { test, expect } = require('../../fixtures/app-fixture');
+const { test, expect } = require('../../fixtures/base-fixture');
 
 /**
  * TEST SUITE: Login Functionality - APP
