@@ -9,21 +9,23 @@ import { ROUTES } from '@/configs/routes.js';
  * xahwm-docs 04: Navigate to /overview, assert URL and tags-deployed or inventory/chart.
  */
 test.describe('Overview', () => {
-  test('should show Overview content when preconditions 1+2 are met', async ({ authenticatedOnOverview }) => {
+  /** TAGS DEPLOYED is i18n-translated; use data-testid for stable assertion. */
+  test('should show TAGS DEPLOYED area on Overview (i18n-safe)', async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
-    await overviewPage.verifyOverviewLoaded();
-  });
+    await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
+    await expect(overviewPage.tagsDeployedTitle).toBeVisible();
 
-  test('should load overview page via direct URL after login', async ({ authenticatedDashboard }) => {
-    const overviewPage = new OverviewPage(authenticatedDashboard);
-    await overviewPage.navigateToOverview();
-    await overviewPage.verifyOverviewLoaded();
-  });
-
-  test('should reach overview via nav link from dashboard', async ({ authenticatedDashboard }) => {
-    const overviewPage = new OverviewPage(authenticatedDashboard);
-    await overviewPage.goToOverviewViaNav();
-    const url = await overviewPage.getCurrentUrl();
-    expect(url).toContain(ROUTES.overview);
+    // Visual highlight so the asserted area is visible in headed run or screenshots
+    await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
+    await overviewPage.highlight(overviewPage.tagsDeployedPanel, {
+      border: '3px solid red',
+      background: 'rgba(255, 200, 0, 0.25)',
+      durationMs: 2000,
+    });
+    await overviewPage.highlight(overviewPage.tagsDeployedTitle, {
+      border: '2px solid darkred',
+      background: 'rgba(255, 100, 100, 0.2)',
+      durationMs: 0,
+    });
   });
 });

@@ -4,8 +4,8 @@ import { LoginPage } from '@/pages/login.page.js';
 
 const testUser = process.env.APP_USER ?? 'user@example.com';
 const testPass = process.env.APP_PASS ?? 'password123';
-const testTenant = process.env.APP_TENANT ?? 'Test Tenant';
-const testFarm = process.env.APP_FARM ?? 'Test Farm';
+const testTenantIdentifier = process.env.APP_TENANT_IDENTIFIER ?? process.env.APP_TENANT ?? '';
+const testFarmIdentifier = process.env.APP_FARM_IDENTIFIER ?? process.env.APP_FARM ?? '';
 
 /**
  * Route guard redirects (xahwm-docs 03-auth-flows).
@@ -22,7 +22,7 @@ test.describe('Auth redirects @auth', () => {
   test('authenticated visit to /sign-in should redirect to /dashboard', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.navigateToLoginPage();
-    await loginPage.loginWithTenantAndFarm(testUser, testPass, testTenant, testFarm);
+    await loginPage.loginWithTenantAndFarm(testUser, testPass, testTenantIdentifier, testFarmIdentifier);
     await loginPage.waitForDashboardLoad();
     await page.goto(ROUTES.signIn);
     await page.waitForURL(new RegExp(ROUTES.dashboard.replace(/\//g, '\\/')), { timeout: 10000 });

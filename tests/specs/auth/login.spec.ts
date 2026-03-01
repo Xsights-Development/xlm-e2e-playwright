@@ -4,8 +4,8 @@ import { ROUTES } from '@/configs/routes.js';
 
 const testUser = process.env.APP_USER ?? 'user@example.com';
 const testPass = process.env.APP_PASS ?? 'password123';
-const testTenant = process.env.APP_TENANT ?? 'Test Tenant';
-const testFarm = process.env.APP_FARM ?? 'Test Farm';
+const testTenantIdentifier = process.env.APP_TENANT_IDENTIFIER ?? process.env.APP_TENANT ?? '';
+const testFarmIdentifier = process.env.APP_FARM_IDENTIFIER ?? process.env.APP_FARM ?? '';
 
 /**
  * Login Page Test Suite
@@ -41,7 +41,7 @@ test.describe('Login Page Tests @auth', () => {
   });
 
   test('@smoke should complete full authentication flow with tenant and farm selection', async ({ page }) => {
-    await loginPage.loginWithTenantAndFarm(testUser, testPass, testTenant, testFarm);
+    await loginPage.loginWithTenantAndFarm(testUser, testPass, testTenantIdentifier, testFarmIdentifier);
     await loginPage.waitForDashboardLoad();
     const currentUrl = await loginPage.getCurrentUrl();
     expect(currentUrl).toContain('dashboard');
@@ -55,7 +55,7 @@ test.describe('Login Page Tests @auth', () => {
 
   test('should select tenant and proceed to next step', async () => {
     await loginPage.login(testUser, testPass);
-    await loginPage.selectTenant(testTenant);
+    await loginPage.selectTenant(testTenantIdentifier);
     await loginPage.clickNext();
     await loginPage.wait(1000);
   });
@@ -63,10 +63,10 @@ test.describe('Login Page Tests @auth', () => {
   test('should select farm and navigate to dashboard', async () => {
     await loginPage.login(testUser, testPass);
     await loginPage.wait(1000);
-    await loginPage.selectTenant(testTenant);
+    await loginPage.selectTenant(testTenantIdentifier);
     await loginPage.clickNext();
     await loginPage.wait(1000);
-    await loginPage.selectFarm(testFarm);
+    await loginPage.selectFarm(testFarmIdentifier);
     await loginPage.clickDashboard();
     await loginPage.waitForDashboardLoad();
   });
@@ -74,10 +74,10 @@ test.describe('Login Page Tests @auth', () => {
   test('should handle missing farm selection gracefully', async () => {
     await loginPage.login(testUser, testPass);
     await loginPage.wait(1000);
-    await loginPage.selectTenant(testTenant);
+    await loginPage.selectTenant(testTenantIdentifier);
     await loginPage.clickNext();
     await loginPage.wait(1000);
-    await loginPage.selectFarm('Non-existent Farm');
+    await loginPage.selectFarm('non-existent-farm-id');
     await loginPage.clickDashboard();
   });
 });
