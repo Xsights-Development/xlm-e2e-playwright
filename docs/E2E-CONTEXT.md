@@ -47,7 +47,7 @@ npx playwright test
 ```
 
 Run by area: `npx playwright test tests/specs/auth/`, `tests/specs/overview/`, etc.  
-See **tests/README.md** for more.
+See **README.md** (project root) for more.
 
 ---
 

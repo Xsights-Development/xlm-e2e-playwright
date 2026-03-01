@@ -1,46 +1,98 @@
 # XLM E2E Playwright Tests
 
-Automated E2E tests for XLM (xahwm-dashboard) using Playwright.
+Automated E2E tests for XLM (xahwm-dashboard) using Playwright: auth, dashboard, overview, animal management.
 
 ## Quick start
 
-- **Setup & run:** See **[tests/README.md](tests/README.md)** for install, env (`.env.example` → `.env`), and how to run tests.
-- **Context & selectors:** See **docs/** – `E2E-CONTEXT.md`, `selectors/login-flow.md`.
+1. **Install:** `npm install` then `npx playwright install` (or `npm run browsers`).
+2. **Env:** Copy `.env.example` to `.env`, set `APP_URL`, `APP_USER`, `APP_PASS`, `APP_TENANT_IDENTIFIER`, `APP_FARM_IDENTIFIER`; for Overview add `APP_LOCATION_TYPE`, `APP_LOCATION_IDENTIFIER`. Never commit `.env`.
+3. **Run:** `npm run test`. See [Commands](#commands) and [docs/](docs/) for context and selectors.
 
-## Commands (from project root)
+## Setup
+
+**Dependencies**
 
 ```bash
 npm install
-npx playwright install   # or: npm run browsers
+npx playwright install
+```
 
-npm run test              # run all
-npm run test:headed -- overview   # run Overview with browser
-npm run test:headed -- auth/login # run by path pattern
-npm run test:ui           # UI mode
-npm run test:debug -- overview   # debug
-npm run report            # open last report
+**Environment**
+
+- Copy `.env.example` to `.env`.
+- Required: `APP_URL`, `APP_USER`, `APP_PASS`, `APP_TENANT_IDENTIFIER`, `APP_FARM_IDENTIFIER` (or `APP_TENANT`, `APP_FARM`).
+- For Overview tests: `APP_LOCATION_TYPE`, `APP_LOCATION_IDENTIFIER` (Barns → room).
+- Optional: `APP_TAG_ID` for animal tests (default `demo-tag`).
+
+`.env` is gitignored; do not commit it.
+
+## Commands
+
+Run from the project root (where `playwright.config.ts` is).
+
+| Command | Description |
+|--------|-------------|
+| `npm run test` | Run all tests |
+| `npm run test:headed` | Run with browser visible |
+| `npm run test:debug` | Debug mode |
+| `npm run test:ui` | Playwright UI mode |
+| `npm run report` | Open last HTML report |
+| `npx playwright test <path-or-pattern>` | Run by path or pattern |
+
+**By tag:** `npx playwright test --grep @smoke`, `--grep @auth`.
+
+## Structure
+
+- **tests/specs/** – Specs (auth, dashboard, overview, animal).
+- **pages/** – Page objects. **fixtures/** – Auth fixtures.
+- **configs/routes.ts** – Route constants. **docs/** – Context and selectors.
+
+```
+tests/specs/
+├── auth/        # Login, tenant/farm, accessibility
+├── dashboard/   # Post-login smoke
+├── overview/    # Room overview (TAGS DEPLOYED)
+└── animal/      # List & detail by tag
 ```
 
 ## Preconditions & fixtures
 
-Tests use auth fixtures from `@/fixtures/auth.fixture.js`:
+Auth fixtures in `@/fixtures/auth.fixture.js`:
 
-- **`authenticatedDashboard`** – Session cleared, then login + tenant + farm; user on dashboard.
-- **`authenticatedOnOverview`** – Same, then location selected from Barns (by `APP_LOCATION_IDENTIFIER`); user on Overview.
+- **authenticatedDashboard** – Login + tenant + farm; user on dashboard.
+- **authenticatedOnOverview** – Same, then location from Barns (`APP_LOCATION_IDENTIFIER`); user on Overview.
 
-Set `APP_LOCATION_TYPE` and `APP_LOCATION_IDENTIFIER` in `.env` for Overview tests. Never commit `.env`.
+Set `APP_LOCATION_TYPE` and `APP_LOCATION_IDENTIFIER` in `.env` for Overview specs.
 
-## Structure
+## Test cases
 
-- **tests/specs/** – Test files (auth, dashboard, overview, animal).
-- **pages/** – Page objects.
-- **fixtures/** – Auth fixtures.
-- **configs/routes.ts** – Route constants.
-- **docs/** – E2E context and selectors.
-- **_legacy-js/** – Old JS suite (not run by default).
+- **Auth:** Sign-in, invalid/valid login, tenant + farm flow, accessibility.
+- **Dashboard:** Smoke – land on dashboard, tags-deployed panel.
+- **Overview:** Load /overview; TAGS DEPLOYED (data-testid).
+- **Animal:** List and detail by tag (`APP_TAG_ID`).
+
+## Reports
+
+```bash
+npm run report
+# or
+npx playwright show-report reports/html
+```
+
+## Troubleshooting
+
+- **Element not found:** App running at `APP_URL`? Check `data-testid` and credentials in `.env`.
+- **Timeouts:** Tune in `playwright.config.ts` or check network/app.
+- **CI:** Set `CI=true`, `APP_URL`, and credential env vars.
+
+## Best practices
+
+1. Prefer **data-testid** (see docs); fallback to role / link href.
+2. Use **configs/routes.ts** (ROUTES) for URLs.
+3. Use fixtures (`authenticatedDashboard`, `authenticatedOnOverview`) for logged-in specs.
+4. Keep tests **independent**; use **Page Objects** for interactions.
 
 ## Documentation
 
-- [tests/README.md](tests/README.md) – Setup, env, running tests.
 - [docs/E2E-CONTEXT.md](docs/E2E-CONTEXT.md) – Env vars, auth flow, Overview.
 - [docs/selectors/login-flow.md](docs/selectors/login-flow.md) – Selectors and login/Overview flow.

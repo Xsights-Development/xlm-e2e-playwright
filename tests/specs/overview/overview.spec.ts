@@ -1,6 +1,5 @@
 import { test, expect } from '@/fixtures/auth.fixture.js';
 import { OverviewPage } from '@/pages/overview.page.js';
-import { ROUTES } from '@/configs/routes.js';
 
 /**
  * Overview (Room) page tests.

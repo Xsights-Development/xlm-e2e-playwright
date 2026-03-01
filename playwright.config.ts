@@ -6,7 +6,7 @@ const isHeaded = process.argv.includes('--headed');
 export default defineConfig({
   testDir: './tests/specs',
   testMatch: /\.spec\.ts$/,
-  testIgnore: ['**/_legacy-js/**', '**/node_modules/**'],
+  testIgnore: ['**/node_modules/**'],
   outputDir: './results',
 
   // Timeouts
