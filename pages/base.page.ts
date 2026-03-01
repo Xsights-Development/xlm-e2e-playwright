@@ -167,6 +167,30 @@ export class BasePage {
     }
 
     /**
+     * Highlight element for visual inspection (e.g. red border, background).
+     * Use in tests when you want to see what is being asserted in headed mode or screenshots.
+     * @param locator - Element to highlight
+     * @param options - border, background, durationMs to show highlight
+     */
+    async highlight(
+        locator: Locator,
+        options?: { border?: string; background?: string; durationMs?: number },
+    ): Promise<void> {
+        const border = options?.border ?? '3px solid red';
+        const background = options?.background ?? 'rgba(255, 255, 0, 0.2)';
+        await locator.evaluate(
+            (el, { b, bg }) => {
+                (el as HTMLElement).style.setProperty('border', b, 'important');
+                (el as HTMLElement).style.setProperty('background-color', bg, 'important');
+                (el as HTMLElement).style.setProperty('box-shadow', '0 0 0 2px rgba(255,0,0,0.5)', 'important');
+            },
+            { b: border, bg: background },
+        );
+        const duration = options?.durationMs ?? 1500;
+        if (duration > 0) await this.wait(duration);
+    }
+
+    /**
      * Select option from dropdown
      * @param locator - Playwright locator for select element
      * @param value - Value to select

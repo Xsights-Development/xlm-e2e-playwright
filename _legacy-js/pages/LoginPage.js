@@ -136,20 +136,36 @@ class LoginPage extends BasePage {
     throw new Error('Could not find login button');
   }
 
-  async selectTenant(tenant) {
-    await this.page.getByRole('combobox').first().click();
-    await this.page.getByText(tenant, { exact: true }).click();
-    console.log(`   ✓ Tenant selected: ${tenant}`);
+  /**
+   * Select tenant by identifier (data-tenant-identifier on option). Click tenant-select first to open dropdown.
+   * @param {string} tenantIdentifier - Tenant identifier
+   */
+  async selectTenant(tenantIdentifier) {
+    const tenantSelect = this.page.getByTestId('tenant-select');
+    await tenantSelect.click();
+    await this.page.locator(`[data-tenant-identifier="${tenantIdentifier}"]`).click();
+    console.log(`   ✓ Tenant selected: ${tenantIdentifier}`);
   }
 
-  async selectFarm(farm) {
-    // if not found, skip
+  /**
+   * Select farm by identifier (data-farm-identifier on option). Click farm-select first to open dropdown.
+   * @param {string|number} farmIdentifier - Farm identifier
+   */
+  async selectFarm(farmIdentifier) {
+    const id = farmIdentifier != null ? String(farmIdentifier) : '';
     try {
-      await this.page.getByRole('combobox').nth(1).click();
-      await this.page.getByText(farm, { exact: true }).click();
-      console.log(`   ✓ Farm selected: ${farm}`);
+      const farmSelect = this.page.getByTestId('farm-select');
+      await farmSelect.click();
+      const option = this.page.locator(`[data-farm-identifier="${id}"]`);
+      const visible = await option.isVisible().catch(() => false);
+      if (visible) {
+        await option.click();
+        console.log(`   ✓ Farm selected: ${id}`);
+      } else {
+        console.log(`   ⚠ Skip selection "${id}" ⚠️`);
+      }
     } catch (error) {
-      console.log(`   ⚠ Skip selection "${farm}" ⚠️`);
+      console.log(`   ⚠ Skip selection "${id}" ⚠️`);
     }
   }
 
@@ -268,14 +284,14 @@ class LoginPage extends BasePage {
     await this.wait(1000);
   }
 
-  async selectTenantAndWait(tenant, waitTime = 1000) {
-    await this.selectTenant(tenant);
+  async selectTenantAndWait(tenantIdentifier, waitTime = 1000) {
+    await this.selectTenant(tenantIdentifier);
     await this.clickNext();
     await this.wait(waitTime);
   }
   
-  async selectFarmAndWait(farm, waitTime = 1000) {
-    await this.selectFarm(farm);
+  async selectFarmAndWait(farmIdentifier, waitTime = 1000) {
+    await this.selectFarm(farmIdentifier);
     await this.clickDashboard();
     await this.wait(waitTime);
   }
@@ -305,24 +321,24 @@ class LoginPage extends BasePage {
   } 
 
   /**
-   * Complete full authentication flow including tenant and farm selection
+   * Complete full authentication flow including tenant and farm selection (by identifier).
    * @param {string} email - User email
    * @param {string} password - User password
-   * @param {string} tenant - Tenant name
-   * @param {string} farm - Farm name
+   * @param {string} tenantIdentifier - Tenant identifier
+   * @param {string|number} farmIdentifier - Farm identifier
    */
-  async loginWithTenantAndFarm(email, password, tenant, farm) {
+  async loginWithTenantAndFarm(email, password, tenantIdentifier, farmIdentifier) {
     // Step 1: Login
     await this.login(email, password);
     await this.wait(1000);
 
     // Step 2: Select tenant and click Next
-    await this.selectTenant(tenant);
+    await this.selectTenant(tenantIdentifier);
     await this.clickNext();
     await this.wait(1000);
 
     // Step 3: Select farm and go to dashboard
-    await this.selectFarm(farm);
+    await this.selectFarm(farmIdentifier);
     await this.clickDashboard();
     
     console.log('✓ Full authentication flow completed');

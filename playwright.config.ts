@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 import 'dotenv/config';
 
+const isHeaded = process.argv.includes('--headed');
+
 export default defineConfig({
   testDir: './tests/specs',
   testMatch: /\.spec\.ts$/,
@@ -28,7 +30,7 @@ export default defineConfig({
   // Browser options
   use: {
     baseURL: process.env.APP_URL || 'http://localhost:3000',
-    headless: process.env.HEADED !== 'true',
+    headless: !isHeaded,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

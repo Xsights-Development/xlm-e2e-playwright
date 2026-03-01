@@ -28,9 +28,9 @@ export class LoginPage extends BasePage {
         this.loginButton = page.getByTestId("login-button");
         this.errorMessage = page.locator('[role="alert"]').first();
 
-        // Tenant and Farm selection
-        this.tenantCombobox = page.getByRole("combobox").first();
-        this.farmCombobox = page.getByRole("combobox").nth(1);
+        // Tenant and Farm selection: prefer data-testid, fallback to combobox (open dropdown first, then select by data-*-identifier)
+        this.tenantCombobox = page.getByTestId("tenant-select").or(page.getByRole("combobox").first());
+        this.farmCombobox = page.getByTestId("farm-select").or(page.getByRole("combobox").first());
         this.nextButton = page.getByTestId("next-button");
         this.dashboardButton = page.getByTestId("dashboard-button");
     }
@@ -107,31 +107,46 @@ export class LoginPage extends BasePage {
     // ==================== TENANT AND FARM SELECTION ====================
 
     /**
-     * Select tenant from dropdown
-     * @param tenant - Tenant name to select
+     * Select tenant from dropdown by identifier (i18n-safe).
+     * Must click combobox first to open dropdown, then click option [data-tenant-identifier].
      */
-    async selectTenant(tenant: string): Promise<void> {
+    async selectTenant(tenantIdentifier: string): Promise<void> {
+        await this.tenantCombobox.waitFor({ state: 'visible', timeout: 10000 });
         await this.tenantCombobox.click();
-        await this.page.getByText(tenant, { exact: true }).click();
+        await this.wait(500);
+        const option = this.page.locator(`[data-tenant-identifier="${tenantIdentifier}"]`).first();
+        await option.waitFor({ state: 'visible', timeout: 10000 });
+        await option.click();
+        await this.wait(300);
     }
 
     /**
-     * Select farm from dropdown (skip if not found)
-     * @param farm - Farm name to select
+     * Select farm from dropdown by identifier (i18n-safe). Skips if not found.
+     * Must click combobox first to open dropdown, then click option [data-farm-identifier].
+     * App renders data-farm-identifier as String(farm.identifier) (may be number from API).
      */
-    async selectFarm(farm: string): Promise<void> {
+    async selectFarm(farmIdentifier: string | number): Promise<void> {
         try {
+            await this.farmCombobox.waitFor({ state: 'visible', timeout: 10000 });
             await this.farmCombobox.click();
-            await this.page.getByText(farm, { exact: true }).click();
-        } catch (error) {}
-		// console.log(`   ⚠ Skip selection "${farm}" ⚠️`);
+            await this.wait(600);
+            const id = String(farmIdentifier);
+            const option = this.page.locator(`[data-farm-identifier="${id}"]`).first();
+            await option.waitFor({ state: 'visible', timeout: 10000 });
+            await option.click();
+        } catch (error) {
+            // Skip if option not found (e.g. identifier mismatch or dropdown closed)
+        }
     }
 
     /**
-     * Click Next button after tenant selection
+     * Click Next button after tenant selection.
+     * Waits for button to be enabled (form sets tenantIdentifier after option click).
      */
     async clickNext(): Promise<void> {
-        await this.click(this.nextButton);
+        await this.nextButton.waitFor({ state: 'visible', timeout: 10000 });
+        await expect(this.nextButton).toBeEnabled({ timeout: 10000 });
+        await this.nextButton.click();
     }
 
     /**
@@ -143,38 +158,95 @@ export class LoginPage extends BasePage {
     }
 
     /**
-     * Wait for dashboard to load after login
+     * Wait for dashboard to load after login.
+     * Polls URL so SPA client-side navigation (history.pushState) is detected.
      */
     async waitForDashboardLoad(): Promise<void> {
-        await this.page.waitForURL(new RegExp(ROUTES.dashboard.replace(/\//g, '\\/')), { timeout: 15000 });
+        const dashboardRegex = new RegExp(ROUTES.dashboard.replace(/\//g, '\\/'));
+        const deadline = Date.now() + 30000;
+        while (Date.now() < deadline) {
+            if (dashboardRegex.test(this.page.url())) return;
+            await this.wait(500);
+        }
+        throw new Error(
+            `Dashboard did not load within 30s. Current URL: ${this.page.url()}`,
+        );
+    }
+
+    /**
+     * Check if we are on dashboard URL.
+     */
+    private isOnDashboard(): boolean {
+        return new RegExp(ROUTES.dashboard.replace(/\//g, '\\/')).test(this.page.url());
+    }
+
+    /**
+     * Wait for post-login screen: either dashboard or tenant selection.
+     * After login the app switches to tenant screen immediately; we wait for it to be ready.
+     */
+    private async waitForPostLoginScreen(): Promise<void> {
+        const deadline = Date.now() + 15000;
+        while (Date.now() < deadline) {
+            if (this.isOnDashboard()) return;
+            if (await this.tenantCombobox.isVisible({ timeout: 1000 }).catch(() => false)) return;
+            if (await this.page.getByTestId("farm-select").isVisible({ timeout: 500 }).catch(() => false)) return;
+            await this.wait(300);
+        }
+    }
+
+    /**
+     * Adaptive post-login: if app shows tenant selector, select by identifier and Next;
+     * if app shows farm selector, select by identifier and Go to Dashboard.
+     * If user has 1 tenant + 1 farm, app skips both and redirects to dashboard (no action needed).
+     */
+    async ensureDashboardAfterLogin(
+        tenantIdentifier: string,
+        farmIdentifier: string | number,
+    ): Promise<void> {
+        await this.waitForPostLoginScreen();
+
+        if (this.isOnDashboard()) return;
+
+        if (await this.tenantCombobox.isVisible({ timeout: 1000 }).catch(() => false)) {
+            await this.selectTenant(tenantIdentifier);
+            await this.wait(1500);
+            await this.clickNext();
+        }
+
+        if (this.isOnDashboard()) return;
+
+        
+        // Only run farm step when farm selector is actually shown (farm-select). Do not use farmCombobox
+        // here because .or(combobox.first()) can match the tenant combobox still in DOM when 1 farm.
+        const farmStepVisible = await this.page.getByTestId("farm-select").isVisible({ timeout: 3000 }).catch(() => false);
+        if (farmStepVisible) {
+            await this.selectFarm(farmIdentifier);
+            await this.clickDashboard();
+            await this.wait(2000);
+        }
+
+        await this.waitForDashboardLoad();
     }
 
     // ==================== COMPLETE FLOW ====================
 
     /**
-     * Complete full authentication flow: login → tenant → farm → dashboard
+     * Complete full authentication flow: login then reach dashboard.
+     * If user has 1 tenant + 1 farm, app skips tenant/farm selection and goes straight to dashboard.
+     * Otherwise selects tenant (and optionally farm) by identifier.
+     *
      * @param email - User email
      * @param password - User password
-     * @param tenant - Tenant name
-     * @param farm - Farm name
+     * @param tenantIdentifier - Tenant identifier to select (when tenant step is shown)
+     * @param farmIdentifier - Farm identifier to select (when farm step is shown)
      */
     async loginWithTenantAndFarm(
         email: string,
         password: string,
-        tenant: string,
-        farm: string,
+        tenantIdentifier: string,
+        farmIdentifier: string | number,
     ): Promise<void> {
-        // Step 1: Login with credentials
         await this.login(email, password);
-        await this.wait(1000);
-
-        // Step 2: Select tenant and click Next
-        await this.selectTenant(tenant);
-        await this.clickNext();
-        await this.wait(1000);
-
-        // Step 3: Select farm and go to dashboard
-        await this.selectFarm(farm);
-        await this.clickDashboard();
+        await this.ensureDashboardAfterLogin(tenantIdentifier, farmIdentifier);
     }
 }

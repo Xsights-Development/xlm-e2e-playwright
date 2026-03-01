@@ -86,11 +86,11 @@ exports.test = base.test.extend({
     // STEP 2: Login with credentials from test config
     await loginPage.login(testConfig.credentials.username, testConfig.credentials.password);
 
-    // STEP 3: Select tenant from test config
-    await loginPage.selectTenantAndWait(testConfig.organization.tenant);
+    // STEP 3: Select tenant by identifier from test config
+    await loginPage.selectTenantAndWait(testConfig.organization.tenantIdentifier);
 
-    // STEP 4: Select farm from test config
-    await loginPage.selectFarmAndWait(testConfig.organization.farm);
+    // STEP 4: Select farm by identifier from test config
+    await loginPage.selectFarmAndWait(testConfig.organization.farmIdentifier);
 
     // STEP 5: Wait for dashboard to load
     await loginPage.waitForDashboardLoad();

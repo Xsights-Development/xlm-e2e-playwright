@@ -1,0 +1,16 @@
+---
+description: E2E Playwright setup, env, auth flow and selectors for XLM
+globs: **/*
+alwaysApply: false
+---
+
+# XLM E2E Playwright
+
+When editing or adding tests in this project:
+
+1. **Context:** Read **docs/E2E-CONTEXT.md** for project purpose, env vars, auth flow (login → tenant/farm → dashboard), and Barns → Overview flow.
+2. **Selectors and flows:** Use **docs/selectors/login-flow.md** for exact selectors (login, tenant, farm, Barns menu, data-location-type, barns-item) and fixture usage.
+3. **Env:** Credentials and location come from `.env` (`APP_USER`, `APP_PASS`, `APP_TENANT_IDENTIFIER`, `APP_FARM_IDENTIFIER` for tenant/farm selection; `APP_LOCATION_TYPE`, `APP_LOCATION_IDENTIFIER` for Overview). Fixtures in `fixtures/auth.fixture.ts` use these.
+4. **Preconditions:** Login, tenant, and farm are preconditions (not the subject of new tests). Use fixtures `authenticatedDashboard` and `authenticatedOnOverview` to test the steps after (dashboard, overview). Each precondition clears session (cookies + storage) before running.
+5. **Overview precondition:** `authenticatedOnOverview` = clear session + login + tenant/farm + open Barns menu (FarmNavigation), expand category by `data-location-type` (APP_LOCATION_TYPE), select room by `data-location-identifier` (APP_LOCATION_IDENTIFIER), then wait for `/overview`. Implemented in `OverviewPage.selectLocationAndWaitForOverview(locationName?, category?, locationIdentifier?)`. Category/room selection is i18n-safe via data attributes (xahwm-dashboard FarmNavigation).
+6. Prefer **data-testid** for stable selectors; routes live in `configs/routes.ts`.
