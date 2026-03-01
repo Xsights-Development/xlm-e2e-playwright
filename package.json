@@ -2,22 +2,20 @@
   "name": "xlm-e2e-playwright",
   "version": "1.0.0",
   "description": "E2E automated tests for XLM App using Playwright",
-  "main": "index.js",
   "private": true,
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "test:ui": "playwright test --grep @ui",
-    "test:data": "playwright test --grep @data",
+    "test:ui": "playwright test --ui",
+    "test:chromium": "playwright test --project=chromium",
+    "test:firefox": "playwright test --project=firefox",
+    "test:webkit": "playwright test --project=webkit",
+    "test:parallel": "playwright test --workers=3",
+    "test:sequential": "playwright test --workers=1",
     "test:debug": "playwright test --debug",
-    "test:report": "playwright show-report tests/reports/playwright/html",
-    "test:tc": "playwright test -g",
-    "test:tc:headed": "playwright test --headed -g",
-    "test:tc:debug": "playwright test --debug -g ",
-    "test:mixed": "playwright test tests/specs/room-dashboard/tag-deployed-mixed.spec.js",
-    "test:mixed:headed": "playwright test tests/specs/room-dashboard/tag-deployed-mixed.spec.js --headed",
-    "clean": "rm -rf tests/reports",
-    "install:browsers": "npx playwright install"
+    "report": "playwright show-report",
+    "browsers": "npx playwright install",
+    "codegen": "playwright codegen"
   },
   "keywords": [
     "xlm",
@@ -26,10 +24,12 @@
     "testing",
     "automation"
   ],
-  "author": "XLM Team",
+  "author": "XSights Team",
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.56.1",
-    "dotenv": "^17.2.3"
+    "@types/node": "^25.0.10",
+    "dotenv": "^17.2.3",
+    "typescript": "^5.9.3"
   }
 }
