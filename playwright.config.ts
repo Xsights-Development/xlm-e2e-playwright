@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices, ViewportSize } from '@playwright/test';
 import 'dotenv/config';
 
 const isHeaded = process.argv.includes('--headed');
@@ -34,7 +34,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    viewport: { width: 1280, height: 720 },
+    viewport: { width: 1920, height: 1200 } as ViewportSize,
     ignoreHTTPSErrors: true,
     actionTimeout: 10 * 1000,
     navigationTimeout: 30 * 1000,
@@ -44,7 +44,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1200 } },
     },
   ],
 });

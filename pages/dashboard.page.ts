@@ -107,13 +107,11 @@ export class DashboardPage extends BasePage {
             // Try clicking user menu first
             if (await this.userMenu.isVisible({ timeout: 2000 })) {
                 await this.click(this.userMenu);
-                console.log('✓ User menu opened');
                 return;
             }
         } catch (error) {
             // If user menu not found, try clicking avatar
             await this.click(this.userAvatar);
-            console.log('✓ User menu opened via avatar');
         }
     }
 
@@ -126,7 +124,6 @@ export class DashboardPage extends BasePage {
         await this.logoutButton.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
 
         await this.click(this.logoutButton);
-        console.log('✓ Logout clicked');
     }
 
     /**

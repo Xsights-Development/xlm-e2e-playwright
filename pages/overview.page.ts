@@ -111,7 +111,9 @@ export class OverviewPage extends BasePage {
 
   /**
    * Returns the displayed "Existing" count for "This Week" from the Tags Deployed chart.
-   * Waits for the element to be visible and parses its text content as integer.
+   * Reads from the sr-only (screen-reader) span with data-testid="existing-this-week-count"; the dashboard
+   * (RoomTagsDeployedChart) renders that span with series[0].data.slice(-1)[0] (last column = "This week").
+   * Prefer getExistingAndOnboardedFromChartTooltip() to assert values from the chart tooltip (hover).
    */
   async getExistingThisWeekCount(): Promise<number> {
     await this.existingThisWeekCount.waitFor({ state: 'visible', timeout: 15000 });
@@ -122,13 +124,49 @@ export class OverviewPage extends BasePage {
 
   /**
    * Returns the displayed "Onboarded" (New Tags Onboarded) count for "This Week" from the Tags Deployed chart.
-   * Waits for the element to be visible and parses its text content as integer.
+   * Reads from the sr-only span with data-testid="onboarded-this-week-count"; the dashboard renders it with
+   * series[1].data.slice(-1)[0] (last column = "This week"). Prefer getExistingAndOnboardedFromChartTooltip() for tooltip.
    */
   async getOnboardedThisWeekCount(): Promise<number> {
     await this.onboardedThisWeekCount.waitFor({ state: 'visible', timeout: 15000 });
     const text = await this.onboardedThisWeekCount.textContent();
     const parsed = parseInt(text ?? '', 10);
     return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  /**
+   * Gets Existing and Onboarded for "This Week" from the TAGS DEPLOYED chart tooltip by hovering the chart columns.
+   * Chart has 4 weeks; "This week" is the last column: path index 3 = Existing bar, index 7 = Onboarded bar.
+   * Waits for chart to render, hovers each bar, reads ApexCharts tooltip and parses "Existing: N" / "Onboarded: N".
+   */
+  async getExistingAndOnboardedFromChartTooltip(): Promise<{ existing: number; onboarded: number }> {
+    await this.tagsDeployedPanel.waitFor({ state: 'visible', timeout: 15000 });
+    await this.tagsDeployedPanel.scrollIntoViewIfNeeded();
+    await this.wait(1500); // allow chart to render
+    const paths = this.tagsDeployedPanel.locator('.apexcharts-bar-series path');
+    const count = await paths.count();
+    if (count < 8) {
+      return { existing: 0, onboarded: 0 };
+    }
+    const tooltipLocator = this.tagsDeployedPanel.locator('.apexcharts-tooltip').first();
+    // This week: Existing bar = path index 3 (bottom), Onboarded bar = path index 7 (top). Stacked chart draws Onboarded on top so use force to hover through overlay.
+    await paths.nth(3).hover({ timeout: 8000, force: true });
+    await this.wait(600);
+    const existingText = (await tooltipLocator.textContent()) ?? '';
+    const existingMatch = existingText.match(/Existing:\s*(\d+)/i);
+    const existing = existingMatch ? parseInt(existingMatch[1], 10) : 0;
+    let onboarded = 0;
+    try {
+      await paths.nth(7).hover({ timeout: 8000, force: true });
+      await this.wait(600);
+      const onboardedText = (await tooltipLocator.textContent()) ?? '';
+      const onboardedMatch = onboardedText.match(/Onboarded:\s*(\d+)/i);
+      onboarded = onboardedMatch ? parseInt(onboardedMatch[1], 10) : 0;
+    } catch {
+      // When Onboarded = 0 the bar has zero height (barHeight="0"), path is outside viewport or not hittable; use 0.
+      onboarded = 0;
+    }
+    return { existing, onboarded };
   }
 
   /**

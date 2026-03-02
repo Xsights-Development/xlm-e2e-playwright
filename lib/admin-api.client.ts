@@ -3,6 +3,12 @@
  * Cookie value format: Authorization="bearer <access_token>"
  */
 import { ADMIN_API, type AdminLoginResponse } from '@/configs/admin-api.js';
+import { buildLastSeenAtString } from '@/lib/last-seen-at.js';
+
+const ANIMAL_ADMIN_LIST_PATH = '/admin/AnimalGroupAdmin/AnimalAdmin/list';
+
+/** Status filter for animal list (poor, normal, sub-optimal; API may support more). */
+export type AnimalListStatus = 'poor' | 'normal' | 'sub-optimal';
 
 export class AdminApiClient {
   private baseUrl: string;
@@ -115,5 +121,52 @@ export class AdminApiClient {
       throw new Error(`Admin API POST ${path} failed (${res.status}): ${text.slice(0, 200)}`);
     }
     return res.json() as Promise<T>;
+  }
+
+  /**
+   * Get animals for "This Week" (last_seen_at range).
+   * Use in Overview specs to align test with Admin API; errors are ignored in specs.
+   * @param options.method - HTTP method; default 'GET'.
+   * @param options.status - One or more statuses: 'poor' | 'normal' | 'sub-optimal'; pass array to filter by multiple in one call; omit for Onboarded.
+   */
+  async getAnimalsThisWeek(options?: {
+    method?: 'GET' | 'POST';
+    status?: AnimalListStatus | AnimalListStatus[];
+  }): Promise<unknown> {
+    const method = options?.method ?? 'GET';
+    const locationIdentifier = process.env.APP_LOCATION_IDENTIFIER ?? '';
+    const lastSeenAt = buildLastSeenAtString();
+    const statuses: AnimalListStatus[] =
+      options?.status == null
+        ? []
+        : Array.isArray(options.status)
+          ? options.status
+          : [options.status];
+    const statusPayload =
+      statuses.length === 0
+        ? {}
+        : statuses.length === 1
+          ? { status: statuses[0] }
+          : { status: statuses };
+    const body: Record<string, unknown> = {
+      page: 1,
+      perPage: 10,
+      last_seen_at: lastSeenAt,
+      ...(locationIdentifier && { location__identifier: locationIdentifier }),
+      ...statusPayload,
+    };
+    if (method === 'GET') {
+      const params: Record<string, string | number> = {};
+      for (const [k, v] of Object.entries(body)) {
+        if (v === undefined || v === null) continue;
+        if (typeof v === 'string' || typeof v === 'number') {
+          params[k] = v;
+        } else if (Array.isArray(v)) {
+          params[k] = v.join(',');
+        }
+      }
+      return this.get<unknown>(ANIMAL_ADMIN_LIST_PATH, params);
+    }
+    return this.post<unknown>(ANIMAL_ADMIN_LIST_PATH, body);
   }
 }
