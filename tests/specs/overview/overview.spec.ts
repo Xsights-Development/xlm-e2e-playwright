@@ -21,11 +21,6 @@ test.describe('Overview', () => {
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
 
     await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
-    await overviewPage.highlight(overviewPage.tagsDeployedChart, {
-      border: '1px dashed blue',
-      background: 'rgba(100, 150, 255, 0.12)',
-      durationMs: 0,
-    });
 
     try {
       await adminApi.getAnimalsThisWeek({ method: 'POST' });
@@ -52,11 +47,6 @@ test.describe('Overview', () => {
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
 
     await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
-    await overviewPage.highlight(overviewPage.tagsDeployedChart, {
-      border: '1px dashed green',
-      background: 'rgba(80, 120, 200, 0.15)',
-      durationMs: 0,
-    });
 
     try {
       await adminApi.getAnimalsThisWeek({ method: 'POST', status: ['poor', 'normal', 'sub-optimal'] });
