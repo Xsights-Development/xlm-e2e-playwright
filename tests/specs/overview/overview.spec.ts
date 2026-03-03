@@ -7,7 +7,7 @@ import { OverviewPage } from '@/pages/overview.page.js';
  * Use fixture `authenticatedOnOverview` for tests that assume both preconditions.
  * xahwm-docs 04: Navigate to /overview, assert URL and tags-deployed or inventory/chart.
  */
-test.describe('Overview', () => {
+test.describe('Overview - Tags Deployed', () => {
   /**
    * TC-001: Verify "Onboarded" (New Tags Onboarded) count for "This Week" matches mock expected.
    * Preconditions: User logged in, tenant/farm selected, on dashboard; location selected so we stay at Overview.
@@ -136,5 +136,97 @@ test.describe('Overview', () => {
       Math.abs(sumExistingOnboarded - currentInventory),
       `Sum (Existing ${existing} + Onboarded ${onboarded} = ${sumExistingOnboarded}) should equal Current Inventory (${currentInventory})`,
     ).toBeLessThanOrEqual(tolerance);
+  });
+});
+
+/**
+ * Barn Layout popup (opened from Dashboard).
+ * Scenario: Verify that the "Barn Layout" popup displays all required components.
+ * Expected: Title, Current inventory, Zone diagram (pig count per zone/status),
+ * Pig status legends, Compass icon, Close button.
+ */
+test.describe('Overview - Barn Layout', () => {
+  test('displays all required components', async ({ authenticatedOnOverview }) => {
+    const overviewPage = new OverviewPage(authenticatedOnOverview);
+
+    // Open Barn Layout popup (zoom-in is on Overview)
+    await overviewPage.openBarnLayoutPopup();
+
+    const dialog = overviewPage.getBarnLayoutDialog();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+
+    // 1. Title (data-testid; format "Title - LocationName")
+    const titleEl = dialog.getByTestId('barn-layout-title');
+    await expect(titleEl).toBeVisible();
+    await expect(titleEl).toContainText(/\s-\s/);
+
+    // 2. Current inventory (data-testid; assert visible and contains a number)
+    const currentInventoryEl = dialog.getByTestId('barn-layout-current-inventory');
+    await expect(currentInventoryEl).toBeVisible();
+    await expect(currentInventoryEl).toContainText(/\d+/);
+
+    // 3. Zone diagram (data-testid; contains either zone grid or no-layout message)
+    const zoneDiagram = dialog.getByTestId('barn-layout-zone-diagram');
+    await expect(zoneDiagram).toBeVisible();
+
+    // 4. Pig status legends (data-testid; i18n-safe, no text assert)
+    const legendSection = dialog.getByTestId('barn-layout-legend');
+    await expect(legendSection).toBeVisible();
+
+    // 5. Compass icon: img or icon near current inventory (IconImage renders img)
+    const compassArea = dialog.locator('img[src*="compass"], div.flex.items-center.gap-2').first();
+    await expect(compassArea).toBeVisible();
+
+    // 6. Close button (data-testid)
+    const closeButton = dialog.locator('xpath=..').getByTestId('barn-layout-close');
+    await expect(closeButton).toBeVisible();
+
+    // --- Information popup ---
+    // const title = (await titleEl.textContent())?.trim() ?? '';
+    // const currentInventoryText = (await currentInventoryEl.textContent())?.trim() ?? '';
+    // const legendText = (await legendSection.textContent())?.trim() ?? '';
+    // const hasCompass = await compassArea.isVisible();
+    // const closeButtonText = (await closeButton.textContent())?.trim() ?? '';
+
+    // Zone diagram: extract labels + values via DOM (resilient to Tailwind class names)
+    // const zoneDiagramRows: string[] = await dialog.evaluate((root: HTMLElement) => {
+    //   const rows = root.querySelectorAll('div[class*="justify-evenly"]');
+    //   const result: string[] = [];
+    //   rows.forEach((row) => {
+    //     const ps = row.querySelectorAll('p');
+    //     if (ps.length < 3) return;
+    //     const normal = (ps[0]?.textContent ?? '').trim();
+    //     const subOptimal = (ps[1]?.textContent ?? '').trim();
+    //     const poor = (ps[2]?.textContent ?? '').trim();
+    //     const card = row.parentElement?.parentElement;
+    //     if (!card) return;
+    //     const nameEl = card.querySelector('p[class*="blue-500"]');
+    //     const zoneName = (nameEl?.textContent ?? '').trim();
+    //     if (zoneName) result.push(`${zoneName}: Normal=${normal}, Sub-optimal=${subOptimal}, Poor=${poor}`);
+    //   });
+    //   return result;
+    // });
+    // const zoneDiagramText =
+    //   zoneDiagramRows.length > 0 ? zoneDiagramRows.join('\n  ') : (await zoneDiagram.textContent())?.trim() ?? '';
+
+    // console.log('\n--- Barn Layout popup ---');
+    // console.log('Title:', title);
+    // console.log('Current inventory:', currentInventoryText);
+    // console.log('Zone diagram (labels + values):');
+    // console.log(zoneDiagramText);
+    // const legendFormatted = legendText
+    //   .replace(/(Healthy)/gi, ' | $1')
+    //   .replace(/(Sub-optimal|Suboptimal)/gi, ' | $1')
+    //   .replace(/(Poor)/gi, ' | $1')
+    //   .replace(/\s+/g, ' ')
+    //   .trim();
+    // console.log('Pig status legends:', legendFormatted);
+    // console.log('Compass icon:', hasCompass ? 'visible' : 'not visible');
+    // console.log('Close button:', closeButtonText || 'visible');
+    // console.log('----------------------------\n');
+
+    // Close dialog and verify it closes
+    await closeButton.click();
+    await expect(dialog).toBeHidden({ timeout: 5000 });
   });
 });

@@ -19,6 +19,9 @@ export class OverviewPage extends BasePage {
   readonly barnsMenu: Locator;
   readonly barnsItem: Locator;
 
+  // Barn Layout popup (opened from Dashboard; data-testid from xahwm-dashboard RoomLayoutDialog / RoomLayoutZoomed)
+  readonly barnLayoutZoomIn: Locator;
+
   constructor(page: Page) {
     super(page);
     this.tagsDeployedPanel = page.getByTestId('tags-deployed-panel');
@@ -31,6 +34,22 @@ export class OverviewPage extends BasePage {
     this.activeTagsXiotS = page.getByTestId('active-tags-xiot-s');
     this.barnsMenu = page.getByTestId('barns-menu');
     this.barnsItem = page.getByTestId('barns-item');
+    this.barnLayoutZoomIn = page.getByTestId('zoom-in');
+  }
+
+  /**
+   * Open Barn Layout popup by clicking the zoom-in button on Overview.
+   */
+  async openBarnLayoutPopup(): Promise<void> {
+    await this.barnLayoutZoomIn.scrollIntoViewIfNeeded({ timeout: 45000 });
+    await this.click(this.barnLayoutZoomIn);
+  }
+
+  /**
+   * Get Barn Layout dialog locator (data-testid from RoomLayoutDialog).
+   */
+  getBarnLayoutDialog(): Locator {
+    return this.page.getByTestId('barn-layout-dialog');
   }
 
   async navigateToOverview(): Promise<void> {
