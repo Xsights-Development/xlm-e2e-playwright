@@ -159,10 +159,11 @@ export class BasePage {
     }
 
     /**
-     * Scroll to element
+     * Scroll to element. Waits for the element to be attached and visible before scrolling.
      * @param locator - Playwright locator
      */
     async scrollToElement(locator: Locator): Promise<void> {
+        await locator.waitFor({ state: 'visible', timeout: 10000 });
         await locator.scrollIntoViewIfNeeded();
     }
 

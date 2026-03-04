@@ -1,6 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@/pages/base.page.js';
 import { ROUTES } from '@/configs/routes.js';
+import { OVERVIEW_TAB_TEST_ID, type OverviewTabKey } from '@/configs/constants.js';
 
 /**
  * OverviewPage - Page Object for Room Overview (/overview)
@@ -140,10 +141,10 @@ export class OverviewPage extends BasePage {
 
   /**
    * Select a location (barn/room) and wait until we are on the Overview page.
-   * Uses data-location-identifier when set (i18n-safe, preferred); otherwise falls back to location name.
-   * @param locationName - Optional. Used when locationIdentifier is not set; clicks the barn with that text.
+   * For i18n-safe selection always pass locationIdentifier (uses data-location-identifier).
+   * @param locationName - Optional. Used only when locationIdentifier is not set; uses hasText (not i18n-safe).
    * @param category - Optional. If set, expands that barn group first via data-location-type (e.g. "General" or "general").
-   * @param locationIdentifier - Optional. When set (e.g. APP_LOCATION_IDENTIFIER), selects by data-location-identifier for reliable click.
+   * @param locationIdentifier - Preferred. When set, selects by data-location-identifier (i18n-safe).
    */
   async selectLocationAndWaitForOverview(
     locationName?: string,
@@ -156,7 +157,6 @@ export class OverviewPage extends BasePage {
     }
     await this.barnsItem.first().waitFor({ state: 'visible', timeout: 15000 });
     if (locationIdentifier) {
-      // Click the inner span (actual click target) to avoid overlay intercepting the barns-item div
       await this.page
         .locator(`span[data-location-identifier="${locationIdentifier}"]`)
         .first()
@@ -170,9 +170,12 @@ export class OverviewPage extends BasePage {
     await this.waitForPageLoad();
   }
 
-  /** Tab names per 04-app-flows: Inventory, Health Status, Location Condition. */
-  async getTabLocator(tabName: string): Promise<Locator> {
-    return this.page.getByRole('tab', { name: tabName });
+  /**
+   * Overview tab locator (i18n-safe via data-testid).
+   * @param tabKey - Use OVERVIEW_TAB.INVENTORY, OVERVIEW_TAB.HEALTH_STATUS, OVERVIEW_TAB.LOCATION_CONDITION
+   */
+  getTabLocator(tabKey: OverviewTabKey): Locator {
+    return this.page.getByTestId(OVERVIEW_TAB_TEST_ID[tabKey]);
   }
 
   /**
