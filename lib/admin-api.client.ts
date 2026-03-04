@@ -3,7 +3,7 @@
  * Cookie value format: Authorization="bearer <access_token>"
  */
 import { ADMIN_API, type AdminLoginResponse } from '@/configs/admin-api.js';
-import { buildLastSeenAtString } from '@/lib/last-seen-at.js';
+import { buildLastSeenAtString } from '@/lib/helpers.js';
 
 const ANIMAL_ADMIN_LIST_PATH = '/admin/AnimalGroupAdmin/AnimalAdmin/list';
 

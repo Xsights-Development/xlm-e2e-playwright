@@ -52,6 +52,53 @@ export class OverviewPage extends BasePage {
     return this.page.getByTestId('barn-layout-dialog');
   }
 
+  /**
+   * Parse current inventory number from Barn Layout popup (barn-layout-current-inventory).
+   * Call when dialog is open. Text is i18n (e.g. "Current inventory: 123"); parses number after colon, strips commas.
+   */
+  async getBarnLayoutPopupCurrentInventory(): Promise<number> {
+    const dialog = this.getBarnLayoutDialog();
+    const el = dialog.getByTestId('barn-layout-current-inventory');
+    await el.waitFor({ state: 'visible', timeout: 10000 });
+    const text = (await el.textContent())?.trim() ?? '';
+    const match = text.match(/[\d,]+$/);
+    if (!match) return 0;
+    const parsed = parseInt(match[0].replace(/,/g, ''), 10);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  /**
+   * Current room's count from Barns menu (active barns-item). Uses active item's font-bold styling.
+   * Fallback: first visible barns-item-count when only one room is visible.
+   */
+  async getBarnsMenuCurrentRoomCount(): Promise<number> {
+    await this.barnsMenu.waitFor({ state: 'visible', timeout: 15000 });
+    const activeItem = this.barnsItem.filter({ has: this.page.locator('[class*="font-bold"]') }).first();
+    const countEl = (await activeItem.count() > 0)
+      ? activeItem.getByTestId('barns-item-count')
+      : this.page.getByTestId('barns-item-count').first();
+    await countEl.waitFor({ state: 'visible', timeout: 5000 });
+    const text = (await countEl.textContent())?.trim() ?? '';
+    const parsed = parseInt(text.replace(/,/g, ''), 10);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  /**
+   * Sum of all visible room counts in Barns menu (barns-item-count). Expand categories if needed for full total.
+   */
+  async getBarnsMenuTotalAllRooms(): Promise<number> {
+    await this.barnsMenu.waitFor({ state: 'visible', timeout: 15000 });
+    const countLocators = this.page.getByTestId('barns-item-count');
+    const n = await countLocators.count();
+    let total = 0;
+    for (let i = 0; i < n; i++) {
+      const text = (await countLocators.nth(i).textContent())?.trim() ?? '';
+      const parsed = parseInt(text.replace(/,/g, ''), 10);
+      if (!Number.isNaN(parsed)) total += parsed;
+    }
+    return total;
+  }
+
   async navigateToOverview(): Promise<void> {
     await this.goto(ROUTES.overview);
     await this.waitForPageLoad();

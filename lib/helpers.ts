@@ -1,6 +1,8 @@
 /**
- * Helpers for Admin API last_seen_at range: today 00:00:00 -> tomorrow 23:00:00.
+ * Shared helpers for E2E (specs, page objects, API client).
  */
+
+// --- Admin API last_seen_at ---
 
 /** Format date as YYYY-MM-DD HH:mm:ss for Admin API last_seen_at. */
 export function formatDateTime(d: Date): string {
@@ -27,4 +29,20 @@ export function getLastSeenAtRange(): { start: string; end: string } {
 export function buildLastSeenAtString(): string {
   const { start, end } = getLastSeenAtRange();
   return `[-]${start},${end}`;
+}
+
+// --- Barn Layout / zone diagram ---
+
+/**
+ * Parse zone diagram row strings "ZoneName: Normal=X, Sub-optimal=Y, Poor=Z"
+ * and return sum of all zone totals (X + Y + Z per row, summed).
+ */
+export function sumZoneDiagramTotals(zoneDiagramRows: string[]): number {
+  let total = 0;
+  const re = /Normal=(\d+),\s*Sub-optimal=(\d+),\s*Poor=(\d+)/;
+  for (const row of zoneDiagramRows) {
+    const m = row.match(re);
+    if (m) total += parseInt(m[1], 10) + parseInt(m[2], 10) + parseInt(m[3], 10);
+  }
+  return total;
 }

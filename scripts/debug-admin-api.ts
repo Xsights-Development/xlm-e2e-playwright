@@ -5,7 +5,7 @@
 import 'dotenv/config';
 import { AdminApiClient } from '../lib/admin-api.client.js';
 import { ADMIN_API } from '../configs/admin-api.js';
-import { buildLastSeenAtString } from '../lib/last-seen-at.js';
+import { buildLastSeenAtString } from '../lib/helpers.js';
 
 const LIST_PATH = '/admin/AnimalGroupAdmin/AnimalAdmin/list';
 
