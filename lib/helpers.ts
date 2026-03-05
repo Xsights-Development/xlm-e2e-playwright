@@ -33,16 +33,66 @@ export function buildLastSeenAtString(): string {
 
 // --- Barn Layout / zone diagram ---
 
+const ZONE_ROW_RE = /Normal=(\d+),\s*Sub-optimal=(\d+),\s*Poor=(\d+)/;
+
 /**
  * Parse zone diagram row strings "ZoneName: Normal=X, Sub-optimal=Y, Poor=Z"
  * and return sum of all zone totals (X + Y + Z per row, summed).
  */
 export function sumZoneDiagramTotals(zoneDiagramRows: string[]): number {
   let total = 0;
-  const re = /Normal=(\d+),\s*Sub-optimal=(\d+),\s*Poor=(\d+)/;
   for (const row of zoneDiagramRows) {
-    const m = row.match(re);
+    const m = row.match(ZONE_ROW_RE);
     if (m) total += parseInt(m[1], 10) + parseInt(m[2], 10) + parseInt(m[3], 10);
   }
   return total;
+}
+
+/**
+ * Parse zone diagram row strings "ZoneName: Normal=X, Sub-optimal=Y, Poor=Z"
+ * and return totals by status (summed across all zones).
+ */
+export function getZoneDiagramTotalsByStatus(zoneDiagramRows: string[]): {
+  normal: number;
+  subOptimal: number;
+  poor: number;
+} {
+  let normal = 0;
+  let subOptimal = 0;
+  let poor = 0;
+  for (const row of zoneDiagramRows) {
+    const m = row.match(ZONE_ROW_RE);
+    if (m) {
+      normal += parseInt(m[1], 10);
+      subOptimal += parseInt(m[2], 10);
+      poor += parseInt(m[3], 10);
+    }
+  }
+  return { normal, subOptimal, poor };
+}
+
+/**
+ * Parse zone diagram row strings "ZoneName: Normal=X, Sub-optimal=Y, Poor=Z"
+ * and return per-zone breakdown.
+ */
+export function parseZoneDiagramRows(zoneDiagramRows: string[]): Array<{
+  zoneName: string;
+  normal: number;
+  subOptimal: number;
+  poor: number;
+}> {
+  const re = /^(.+?):\s*Normal=(\d+),\s*Sub-optimal=(\d+),\s*Poor=(\d+)$/;
+  const result: Array<{ zoneName: string; normal: number; subOptimal: number; poor: number }> = [];
+  for (const row of zoneDiagramRows) {
+    const m = row.match(re);
+    if (m) {
+      result.push({
+        zoneName: m[1].trim(),
+        normal: parseInt(m[2], 10),
+        subOptimal: parseInt(m[3], 10),
+        poor: parseInt(m[4], 10),
+      });
+    }
+  }
+  return result;
 }

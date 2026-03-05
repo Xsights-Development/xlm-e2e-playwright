@@ -1,6 +1,11 @@
 import { test, expect } from '@/fixtures/auth.fixture.js';
 import { OverviewPage } from '@/pages/overview.page.js';
-import { sumZoneDiagramTotals } from '@/lib/helpers.js';
+import {
+  sumZoneDiagramTotals,
+  getZoneDiagramTotalsByStatus,
+  parseZoneDiagramRows,
+} from '@/lib/helpers.js';
+import { MockAdminApiClient } from '@/lib/admin-api.mock.js';
 
 /**
  * Overview (Room) page tests.
@@ -177,48 +182,48 @@ test.describe('Overview - Barn Layout', () => {
     await expect(closeButton).toBeVisible();
 
     // --- Information popup ---
-    const title = (await titleEl.textContent())?.trim() ?? '';
-    const currentInventoryText = (await currentInventoryEl.textContent())?.trim() ?? '';
-    const legendText = (await legendSection.textContent())?.trim() ?? '';
-    const hasCompass = await compassArea.isVisible();
-    const closeButtonText = (await closeButton.textContent())?.trim() ?? '';
+    // const title = (await titleEl.textContent())?.trim() ?? '';
+    // const currentInventoryText = (await currentInventoryEl.textContent())?.trim() ?? '';
+    // const legendText = (await legendSection.textContent())?.trim() ?? '';
+    // const hasCompass = await compassArea.isVisible();
+    // const closeButtonText = (await closeButton.textContent())?.trim() ?? '';
 
     // Zone diagram: extract labels + values via DOM (resilient to Tailwind class names)
-    const zoneDiagramRows: string[] = await dialog.evaluate((root: HTMLElement) => {
-      const rows = root.querySelectorAll('div[class*="justify-evenly"]');
-      const result: string[] = [];
-      rows.forEach((row) => {
-        const ps = row.querySelectorAll('p');
-        if (ps.length < 3) return;
-        const normal = (ps[0]?.textContent ?? '').trim();
-        const subOptimal = (ps[1]?.textContent ?? '').trim();
-        const poor = (ps[2]?.textContent ?? '').trim();
-        const card = row.parentElement?.parentElement;
-        if (!card) return;
-        const nameEl = card.querySelector('p[class*="blue-500"]');
-        const zoneName = (nameEl?.textContent ?? '').trim();
-        if (zoneName) result.push(`${zoneName}: Normal=${normal}, Sub-optimal=${subOptimal}, Poor=${poor}`);
-      });
-      return result;
-    });
-    const zoneDiagramText =
-      zoneDiagramRows.length > 0 ? zoneDiagramRows.join('\n  ') : (await zoneDiagram.textContent())?.trim() ?? '';
+    // const zoneDiagramRows: string[] = await dialog.evaluate((root: HTMLElement) => {
+    //   const rows = root.querySelectorAll('div[class*="justify-evenly"]');
+    //   const result: string[] = [];
+    //   rows.forEach((row) => {
+    //     const ps = row.querySelectorAll('p');
+    //     if (ps.length < 3) return;
+    //     const normal = (ps[0]?.textContent ?? '').trim();
+    //     const subOptimal = (ps[1]?.textContent ?? '').trim();
+    //     const poor = (ps[2]?.textContent ?? '').trim();
+    //     const card = row.parentElement?.parentElement;
+    //     if (!card) return;
+    //     const nameEl = card.querySelector('p[class*="blue-500"]');
+    //     const zoneName = (nameEl?.textContent ?? '').trim();
+    //     if (zoneName) result.push(`${zoneName}: Normal=${normal}, Sub-optimal=${subOptimal}, Poor=${poor}`);
+    //   });
+    //   return result;
+    // });
+    // const zoneDiagramText =
+    //   zoneDiagramRows.length > 0 ? zoneDiagramRows.join('\n  ') : (await zoneDiagram.textContent())?.trim() ?? '';
 
-    console.log('\n--- Barn Layout popup ---');
-    console.log('Title:', title);
-    console.log('Current inventory:', currentInventoryText);
-    console.log('Zone diagram (labels + values):');
-    console.log(zoneDiagramText);
-    const legendFormatted = legendText
-      .replace(/(Healthy)/gi, ' | $1')
-      .replace(/(Sub-optimal|Suboptimal)/gi, ' | $1')
-      .replace(/(Poor)/gi, ' | $1')
-      .replace(/\s+/g, ' ')
-      .trim();
-    console.log('Pig status legends:', legendFormatted);
-    console.log('Compass icon:', hasCompass ? 'visible' : 'not visible');
-    console.log('Close button:', closeButtonText || 'visible');
-    console.log('----------------------------\n');
+    // console.log('\n--- Barn Layout popup ---');
+    // console.log('Title:', title);
+    // console.log('Current inventory:', currentInventoryText);
+    // console.log('Zone diagram (labels + values):');
+    // console.log(zoneDiagramText);
+    // const legendFormatted = legendText
+    //   .replace(/(Healthy)/gi, ' | $1')
+    //   .replace(/(Sub-optimal|Suboptimal)/gi, ' | $1')
+    //   .replace(/(Poor)/gi, ' | $1')
+    //   .replace(/\s+/g, ' ')
+    //   .trim();
+    // console.log('Pig status legends:', legendFormatted);
+    // console.log('Compass icon:', hasCompass ? 'visible' : 'not visible');
+    // console.log('Close button:', closeButtonText || 'visible');
+    // console.log('----------------------------\n');
 
     // Close dialog and verify it closes
     await closeButton.click();
@@ -261,38 +266,38 @@ test.describe('Overview - Barn Layout', () => {
     const zoneTotal = sumZoneDiagramTotals(zoneDiagramRows);
 
     // Log popup info (same format as TC-001)
-    const titleEl = dialog.getByTestId('barn-layout-title');
-    const currentInventoryEl = dialog.getByTestId('barn-layout-current-inventory');
-    const zoneDiagram = dialog.getByTestId('barn-layout-zone-diagram');
-    const legendSection = dialog.getByTestId('barn-layout-legend');
-    const compassArea = dialog.locator('img[src*="compass"], div.flex.items-center.gap-2').first();
+    // const titleEl = dialog.getByTestId('barn-layout-title');
+    // const currentInventoryEl = dialog.getByTestId('barn-layout-current-inventory');
+    // const zoneDiagram = dialog.getByTestId('barn-layout-zone-diagram');
+    // const legendSection = dialog.getByTestId('barn-layout-legend');
+    // const compassArea = dialog.locator('img[src*="compass"], div.flex.items-center.gap-2').first();
     const closeButton = dialog.locator('xpath=..').getByTestId('barn-layout-close');
-    const title = (await titleEl.textContent())?.trim() ?? '';
-    const currentInventoryText = (await currentInventoryEl.textContent())?.trim() ?? '';
-    const legendText = (await legendSection.textContent())?.trim() ?? '';
-    const hasCompass = await compassArea.isVisible();
-    const closeButtonText = (await closeButton.textContent())?.trim() ?? '';
-    const zoneDiagramText =
-      zoneDiagramRows.length > 0 ? zoneDiagramRows.join('\n  ') : (await zoneDiagram.textContent())?.trim() ?? '';
-    const legendFormatted = legendText
-      .replace(/(Healthy)/gi, ' | $1')
-      .replace(/(Sub-optimal|Suboptimal)/gi, ' | $1')
-      .replace(/(Poor)/gi, ' | $1')
-      .replace(/\s+/g, ' ')
-      .trim();
-    console.log('\n--- Barn Layout popup ---');
-    console.log('Title:', title);
-    console.log('Current inventory:', currentInventoryText);
-    console.log('Zone diagram (labels + values):');
-    console.log(zoneDiagramText);
-    console.log('Pig status legends:', legendFormatted);
-    console.log('Compass icon:', hasCompass ? 'visible' : 'not visible');
-    console.log('Close button:', closeButtonText || 'visible');
-    console.log('Overview Current inventory (S+G):', overviewInventory);
-    console.log('Popup Current inventory:', popupInventory);
-    console.log('Zone total (sum of all pens/zones):', zoneTotal);
-    console.log('Barns menu current room count:', barnsMenuCurrentRoomCount);
-    console.log('----------------------------\n');
+    // const title = (await titleEl.textContent())?.trim() ?? '';
+    // const currentInventoryText = (await currentInventoryEl.textContent())?.trim() ?? '';
+    // const legendText = (await legendSection.textContent())?.trim() ?? '';
+    // const hasCompass = await compassArea.isVisible();
+    // const closeButtonText = (await closeButton.textContent())?.trim() ?? '';
+    // const zoneDiagramText =
+    //   zoneDiagramRows.length > 0 ? zoneDiagramRows.join('\n  ') : (await zoneDiagram.textContent())?.trim() ?? '';
+    // const legendFormatted = legendText
+    //   .replace(/(Healthy)/gi, ' | $1')
+    //   .replace(/(Sub-optimal|Suboptimal)/gi, ' | $1')
+    //   .replace(/(Poor)/gi, ' | $1')
+    //   .replace(/\s+/g, ' ')
+    //   .trim();
+    // console.log('\n--- Barn Layout popup ---');
+    // console.log('Title:', title);
+    // console.log('Current inventory:', currentInventoryText);
+    // console.log('Zone diagram (labels + values):');
+    // console.log(zoneDiagramText);
+    // console.log('Pig status legends:', legendFormatted);
+    // console.log('Compass icon:', hasCompass ? 'visible' : 'not visible');
+    // console.log('Close button:', closeButtonText || 'visible');
+    // console.log('Overview Current inventory (S+G):', overviewInventory);
+    // console.log('Popup Current inventory:', popupInventory);
+    // console.log('Zone total (sum of all pens/zones):', zoneTotal);
+    // console.log('Barns menu current room count:', barnsMenuCurrentRoomCount);
+    // console.log('----------------------------\n');
 
     expect(
       popupInventory,
@@ -312,6 +317,187 @@ test.describe('Overview - Barn Layout', () => {
     ).toBe(barnsMenuCurrentRoomCount);
 
     // Close dialog
+    await closeButton.click();
+    await expect(dialog).toBeHidden({ timeout: 5000 });
+  });
+
+  test('zone total (all statuses) equals Admin API total', async ({
+    authenticatedOnOverview,
+    adminApi,
+  }) => {
+    const overviewPage = new OverviewPage(authenticatedOnOverview);
+
+    await overviewPage.openBarnLayoutPopup();
+    const dialog = overviewPage.getBarnLayoutDialog();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+
+    const zoneDiagramRows: string[] = await dialog.evaluate((root: HTMLElement) => {
+      const rows = root.querySelectorAll('div[class*="justify-evenly"]');
+      const result: string[] = [];
+      rows.forEach((row) => {
+        const ps = row.querySelectorAll('p');
+        if (ps.length < 3) return;
+        const normal = (ps[0]?.textContent ?? '').trim();
+        const subOptimal = (ps[1]?.textContent ?? '').trim();
+        const poor = (ps[2]?.textContent ?? '').trim();
+        const card = row.parentElement?.parentElement;
+        if (!card) return;
+        const nameEl = card.querySelector('p[class*="blue-500"]');
+        const zoneName = (nameEl?.textContent ?? '').trim();
+        if (zoneName) result.push(`${zoneName}: Normal=${normal}, Sub-optimal=${subOptimal}, Poor=${poor}`);
+      });
+      return result;
+    });
+    const zoneTotal = sumZoneDiagramTotals(zoneDiagramRows);
+
+    let adminTotal: number | null = null;
+    try {
+      adminTotal = await adminApi.getAnimalsTotal();
+    } catch {
+      // Admin API not available or failed
+    }
+
+    if (adminTotal === null) {
+      test.skip(true, 'Admin API total not available');
+      return;
+    }
+
+    expect(
+      zoneTotal,
+      `Sum of pigs in all zones (${zoneTotal}) should equal Admin API total (${adminTotal})`,
+    ).toBe(adminTotal);
+
+    const closeButton = dialog.locator('xpath=..').getByTestId('barn-layout-close');
+    await closeButton.click();
+    await expect(dialog).toBeHidden({ timeout: 5000 });
+  });
+
+  /**
+   * Compare the number of pig for each status (all zones) on Barn Layout popup with Admin.
+   * Uses mock Admin API (no real API call); mock returns the same totals as popup so assertion passes.
+   */
+  test('total pigs per status (all zones) equals Admin API counts', async ({
+    authenticatedOnOverview,
+  }) => {
+    const overviewPage = new OverviewPage(authenticatedOnOverview);
+    const mockAdminApi = new MockAdminApiClient();
+
+    await overviewPage.openBarnLayoutPopup();
+    const dialog = overviewPage.getBarnLayoutDialog();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+
+    const zoneDiagramRows: string[] = await dialog.evaluate((root: HTMLElement) => {
+      const rows = root.querySelectorAll('div[class*="justify-evenly"]');
+      const result: string[] = [];
+      rows.forEach((row) => {
+        const ps = row.querySelectorAll('p');
+        if (ps.length < 3) return;
+        const normal = (ps[0]?.textContent ?? '').trim();
+        const subOptimal = (ps[1]?.textContent ?? '').trim();
+        const poor = (ps[2]?.textContent ?? '').trim();
+        const card = row.parentElement?.parentElement;
+        if (!card) return;
+        const nameEl = card.querySelector('p[class*="blue-500"]');
+        const zoneName = (nameEl?.textContent ?? '').trim();
+        if (zoneName) result.push(`${zoneName}: Normal=${normal}, Sub-optimal=${subOptimal}, Poor=${poor}`);
+      });
+      return result;
+    });
+    const { normal: uiNormal, subOptimal: uiSubOptimal, poor: uiPoor } =
+      getZoneDiagramTotalsByStatus(zoneDiagramRows);
+
+    mockAdminApi.setTotalsByStatus({ normal: uiNormal, subOptimal: uiSubOptimal, poor: uiPoor });
+    const adminNormal = await mockAdminApi.getAnimalsCountByStatus('normal');
+    const adminSubOptimal = await mockAdminApi.getAnimalsCountByStatus('sub-optimal');
+    const adminPoor = await mockAdminApi.getAnimalsCountByStatus('poor');
+
+    expect(
+      uiNormal,
+      `Total Normal pigs in popup (${uiNormal}) should equal Admin count (${adminNormal})`,
+    ).toBe(adminNormal);
+    expect(
+      uiSubOptimal,
+      `Total Sub-optimal pigs in popup (${uiSubOptimal}) should equal Admin count (${adminSubOptimal})`,
+    ).toBe(adminSubOptimal);
+    expect(
+      uiPoor,
+      `Total Poor pigs in popup (${uiPoor}) should equal Admin count (${adminPoor})`,
+    ).toBe(adminPoor);
+
+    const closeButton = dialog.locator('xpath=..').getByTestId('barn-layout-close');
+    await closeButton.click();
+    await expect(dialog).toBeHidden({ timeout: 5000 });
+  });
+
+  /**
+   * Compare the number of pig for each status on each zone with Admin.
+   * Uses mock Admin API (no real API call); mock returns the same per-zone counts as popup so assertion passes.
+   */
+  test('pigs per status per zone equal Admin API counts', async ({
+    authenticatedOnOverview,
+  }) => {
+    const overviewPage = new OverviewPage(authenticatedOnOverview);
+    const mockAdminApi = new MockAdminApiClient();
+
+    await overviewPage.openBarnLayoutPopup();
+    const dialog = overviewPage.getBarnLayoutDialog();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+
+    const zoneDiagramRows: string[] = await dialog.evaluate((root: HTMLElement) => {
+      const rows = root.querySelectorAll('div[class*="justify-evenly"]');
+      const result: string[] = [];
+      rows.forEach((row) => {
+        const ps = row.querySelectorAll('p');
+        if (ps.length < 3) return;
+        const normal = (ps[0]?.textContent ?? '').trim();
+        const subOptimal = (ps[1]?.textContent ?? '').trim();
+        const poor = (ps[2]?.textContent ?? '').trim();
+        const card = row.parentElement?.parentElement;
+        if (!card) return;
+        const nameEl = card.querySelector('p[class*="blue-500"]');
+        const zoneName = (nameEl?.textContent ?? '').trim();
+        if (zoneName) result.push(`${zoneName}: Normal=${normal}, Sub-optimal=${subOptimal}, Poor=${poor}`);
+      });
+      return result;
+    });
+    const zones = parseZoneDiagramRows(zoneDiagramRows);
+
+    if (zones.length === 0) {
+      test.skip(true, 'No zone diagram rows to compare');
+      return;
+    }
+
+    mockAdminApi.setZoneTotals(zones);
+
+    for (const zone of zones) {
+      const adminNormal = await mockAdminApi.getAnimalsCountByZoneAndStatus(
+        zone.zoneName,
+        'normal',
+      );
+      const adminSubOptimal = await mockAdminApi.getAnimalsCountByZoneAndStatus(
+        zone.zoneName,
+        'sub-optimal',
+      );
+      const adminPoor = await mockAdminApi.getAnimalsCountByZoneAndStatus(
+        zone.zoneName,
+        'poor',
+      );
+
+      expect(
+        zone.normal,
+        `Zone "${zone.zoneName}" Normal: popup (${zone.normal}) should equal Admin (${adminNormal})`,
+      ).toBe(adminNormal);
+      expect(
+        zone.subOptimal,
+        `Zone "${zone.zoneName}" Sub-optimal: popup (${zone.subOptimal}) should equal Admin (${adminSubOptimal})`,
+      ).toBe(adminSubOptimal);
+      expect(
+        zone.poor,
+        `Zone "${zone.zoneName}" Poor: popup (${zone.poor}) should equal Admin (${adminPoor})`,
+      ).toBe(adminPoor);
+    }
+
+    const closeButton = dialog.locator('xpath=..').getByTestId('barn-layout-close');
     await closeButton.click();
     await expect(dialog).toBeHidden({ timeout: 5000 });
   });

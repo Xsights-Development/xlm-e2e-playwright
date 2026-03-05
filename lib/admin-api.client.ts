@@ -143,11 +143,7 @@ export class AdminApiClient {
           ? options.status
           : [options.status];
     const statusPayload =
-      statuses.length === 0
-        ? {}
-        : statuses.length === 1
-          ? { status: statuses[0] }
-          : { status: statuses };
+      statuses.length === 0 ? {} : { status: statuses };
     const body: Record<string, unknown> = {
       page: 1,
       perPage: 10,
@@ -168,5 +164,80 @@ export class AdminApiClient {
       return this.get<unknown>(ANIMAL_ADMIN_LIST_PATH, params);
     }
     return this.post<unknown>(ANIMAL_ADMIN_LIST_PATH, body);
+  }
+
+  /**
+   * Parse count/total from list response (shared by getAnimalsTotal and getAnimalsCountByStatus).
+   * Tries common shapes: count, total, data.total, data.count (dashboard uses result + count).
+   */
+  private parseCountFromListResponse(res: unknown): number | null {
+    if (res == null || typeof res !== 'object') return null;
+    const o = res as Record<string, unknown>;
+    if (typeof o.count === 'number') return o.count;
+    if (typeof o.total === 'number') return o.total;
+    const data = o.data as Record<string, unknown> | undefined;
+    if (data != null) {
+      if (typeof data.total === 'number') return data.total;
+      if (typeof data.count === 'number') return data.count;
+    }
+    return null;
+  }
+
+  /**
+   * Get total animal count (current location, all statuses: poor, normal, sub-optimal).
+   * Use in Barn Layout spec to compare zone total with Admin API.
+   * @returns Total count from list response, or null if request fails or response has no count/total field.
+   */
+  async getAnimalsTotal(): Promise<number | null> {
+    try {
+      const res = await this.getAnimalsThisWeek({
+        method: 'POST',
+        status: ['poor', 'normal', 'sub-optimal'],
+      });
+      return this.parseCountFromListResponse(res);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get animal count for a single status (current location).
+   * Use in Barn Layout spec to compare popup totals per status with Admin.
+   * @returns Count from list response, or null if request fails or response has no count/total field.
+   */
+  async getAnimalsCountByStatus(status: AnimalListStatus): Promise<number | null> {
+    try {
+      const res = await this.getAnimalsThisWeek({ method: 'POST', status });
+      return this.parseCountFromListResponse(res);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get animal count for a given zone/pen and status (current location).
+   * Requires Admin API to support zone/pen filter (e.g. pen__name). Returns null if not supported or request fails.
+   * @returns Count from list response, or null if API does not support per-zone or request fails.
+   */
+  async getAnimalsCountByZoneAndStatus(
+    zoneNameOrId: string,
+    status: AnimalListStatus,
+  ): Promise<number | null> {
+    try {
+      const locationIdentifier = process.env.APP_LOCATION_IDENTIFIER ?? '';
+      const lastSeenAt = buildLastSeenAtString();
+      const body: Record<string, unknown> = {
+        page: 1,
+        perPage: 10,
+        last_seen_at: lastSeenAt,
+        ...(locationIdentifier && { location__identifier: locationIdentifier }),
+        status,
+        pen__name: zoneNameOrId,
+      };
+      const res = await this.post<unknown>(ANIMAL_ADMIN_LIST_PATH, body);
+      return this.parseCountFromListResponse(res);
+    } catch {
+      return null;
+    }
   }
 }

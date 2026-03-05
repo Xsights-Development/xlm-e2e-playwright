@@ -140,6 +140,51 @@ export class OverviewPage extends BasePage {
   }
 
   /**
+   * Get the currently active location identifier from the Barns menu (the item with font-bold).
+   */
+  async getActiveLocationIdentifier(): Promise<string | null> {
+    await this.barnsMenu.waitFor({ state: 'visible', timeout: 15000 });
+    const activeItem = this.barnsItem
+      .filter({ has: this.page.locator('[class*="font-bold"]') })
+      .first();
+    const id = await activeItem.getAttribute('data-location-identifier');
+    return id ?? null;
+  }
+
+  /**
+   * Click a location in the Barns menu by identifier and wait until Overview is loaded and that location is active.
+   * Uses the same click target as selectLocationAndWaitForOverview (span with data-location-identifier).
+   */
+  async selectLocationByIdentifierAndWaitForOverview(locationIdentifier: string): Promise<void> {
+    await this.barnsMenu.waitFor({ state: 'visible', timeout: 15000 });
+    await this.page
+      .locator(`span[data-location-identifier="${locationIdentifier}"]`)
+      .first()
+      .click();
+    await this.page.waitForURL(new RegExp(ROUTES.overview.replace(/\//g, '\\/')), { timeout: 15000 });
+    await this.waitForPageLoad();
+    await this.waitForActiveLocation(locationIdentifier);
+  }
+
+  /**
+   * Wait until the given location identifier is the active one in the Barns menu (font-bold).
+   */
+  async waitForActiveLocation(locationIdentifier: string, timeoutMs = 10000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const active = await this.getActiveLocationIdentifier();
+      if (active === locationIdentifier) return;
+      await this.wait(200);
+    }
+    const active = await this.getActiveLocationIdentifier();
+    if (active !== locationIdentifier) {
+      throw new Error(
+        `Expected active location ${locationIdentifier} but got ${active} after ${timeoutMs}ms`,
+      );
+    }
+  }
+
+  /**
    * Select a location (barn/room) and wait until we are on the Overview page.
    * For i18n-safe selection always pass locationIdentifier (uses data-location-identifier).
    * @param locationName - Optional. Used only when locationIdentifier is not set; uses hasText (not i18n-safe).
