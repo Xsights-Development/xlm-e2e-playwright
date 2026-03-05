@@ -284,6 +284,38 @@ export class OverviewPage extends BasePage {
   }
 
   /**
+   * Returns the G-tags count from the CURRENT INVENTORY panel (active-tags-xiot-g).
+   * If the element is not visible within 3s (e.g. type_of_pigs is sow only), returns 0.
+   * Values may be locale-formatted (e.g. "1,016"); commas are stripped before parsing.
+   */
+  async getCurrentInventoryGCount(): Promise<number> {
+    try {
+      await this.activeTagsXiotG.first().waitFor({ state: 'visible', timeout: 3000 });
+    } catch {
+      return 0;
+    }
+    const text = (await this.activeTagsXiotG.first().textContent())?.trim() ?? '';
+    const parsed = parseInt(text.replace(/,/g, ''), 10);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  /**
+   * Returns the S-tags count from the CURRENT INVENTORY panel (active-tags-xiot-s).
+   * If the element is not visible within 3s (e.g. type_of_pigs is grower only) or not on UI, returns 0.
+   * Values may be locale-formatted; commas are stripped before parsing.
+   */
+  async getCurrentInventorySCount(): Promise<number> {
+    try {
+      await this.activeTagsXiotS.first().waitFor({ state: 'visible', timeout: 3000 });
+    } catch {
+      return 0;
+    }
+    const text = (await this.activeTagsXiotS.first().textContent())?.trim() ?? '';
+    const parsed = parseInt(text.replace(/,/g, ''), 10);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  /**
    * Returns the total number of Active tags from the CURRENT INVENTORY panel (RoomStatistics).
    * Sums active-tags-xiot-g and active-tags-xiot-s (one or both visible depending on type_of_pigs).
    * Values may be locale-formatted (e.g. "1,016"); commas are stripped before parsing.

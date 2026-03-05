@@ -60,4 +60,20 @@ export class MockAdminApiClient {
       this.totalsByStatus.normal + this.totalsByStatus.subOptimal + this.totalsByStatus.poor
     );
   }
+
+  /**
+   * Stub: total G tags (Normal/Sub-optimal/Poor, last_seen ≤ 48h) from Animal table on Admin.
+   * Returns 1016 for Current Inventory G-tags comparison. Replace with real Admin API when available.
+   */
+  async getCurrentInventoryGCountFromAdmin(): Promise<number> {
+    return 1016;
+  }
+
+  /**
+   * Stub: total S tags (Normal/Sub-optimal/Poor, last_seen ≤ 48h) from Animal table on Admin.
+   * Returns 0 for Current Inventory S-tags comparison (hidden or none on UI). Replace with real Admin API when available.
+   */
+  async getCurrentInventorySCountFromAdmin(): Promise<number> {
+    return 0;
+  }
 }

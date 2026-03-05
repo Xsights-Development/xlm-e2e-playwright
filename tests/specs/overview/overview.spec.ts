@@ -139,6 +139,148 @@ test.describe('Overview - Tags Deployed', () => {
 });
 
 /**
+ * Overview - Current Inventory vs Admin (G/S).
+ * Compare G-tags and S-tags on Current Inventory panel with Admin (mock 1016 / 0).
+ * Stub Admin methods to be replaced with real API (total G/S tags, last_seen ≤ 48h) later.
+ */
+test.describe('Overview - Current Inventory vs Admin (G/S)', () => {
+  /**
+   * Compare the number of G-tags on Current Inventory with Admin.
+   * Expected: Current Inventory G-tags = total G tags (Normal/Sub-optimal/Poor, last_seen ≤ 48h) on Admin; mock returns 1016.
+   */
+  test('Current Inventory G-tags equals Admin total (mock 1016)', async ({
+    authenticatedOnOverview,
+  }) => {
+    const overviewPage = new OverviewPage(authenticatedOnOverview);
+    const mockAdminApi = new MockAdminApiClient();
+
+    await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
+    await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
+
+    const uiG = await overviewPage.getCurrentInventoryGCount();
+    const adminG = await mockAdminApi.getCurrentInventoryGCountFromAdmin();
+
+    expect(
+      uiG,
+      `Current Inventory G-tags (UI: ${uiG}) should equal Admin total (${adminG})`,
+    ).toBe(adminG);
+  });
+
+  /**
+   * Compare the number of S-tags on Current Inventory with Admin.
+   * If S-tags not found on UI (hidden or none), returns 0. Mock Admin returns 0.
+   */
+  test('Current Inventory S-tags equals Admin total (mock 0)', async ({
+    authenticatedOnOverview,
+  }) => {
+    const overviewPage = new OverviewPage(authenticatedOnOverview);
+    const mockAdminApi = new MockAdminApiClient();
+
+    await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
+    await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
+
+    const uiS = await overviewPage.getCurrentInventorySCount();
+    const adminS = await mockAdminApi.getCurrentInventorySCountFromAdmin();
+
+    expect(
+      uiS,
+      `Current Inventory S-tags (UI: ${uiS}) should equal Admin total (${adminS})`,
+    ).toBe(adminS);
+  });
+
+  /**
+   * Verify that the total in Current Inventory equals the sum of active G and S tags.
+   * Expected: Current Inventory = Active G tags + Active S tags.
+   */
+  test('Current Inventory total equals sum of Active G and S tags', async ({
+    authenticatedOnOverview,
+  }) => {
+    const overviewPage = new OverviewPage(authenticatedOnOverview);
+
+    await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
+    await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
+
+    const currentInventory = await overviewPage.getCurrentInventoryCount();
+    const activeG = await overviewPage.getCurrentInventoryGCount();
+    const activeS = await overviewPage.getCurrentInventorySCount();
+    const sumGS = activeG + activeS;
+
+    expect(
+      currentInventory,
+      `Current Inventory (${currentInventory}) should equal Active G tags (${activeG}) + Active S tags (${activeS}) = ${sumGS}`,
+    ).toBe(sumGS);
+  });
+});
+
+/**
+ * Overview - Current Inventory.
+ * Compare total Current inventory with Tags Deployed, Barn Layout, and Barns menu.
+ */
+test.describe('Overview - Current Inventory', () => {
+  /**
+   * Compare the total number of Current inventory with all other sources (summary test).
+   * Expected: Current inventory = Tags Deployed (this week) = total on Barn Layout = Barns menu count.
+   */
+  test('Current inventory equals Tags Deployed (this week), Barn Layout total, and Barns menu', async ({
+    authenticatedOnOverview,
+  }) => {
+    const overviewPage = new OverviewPage(authenticatedOnOverview);
+
+    await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
+    await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
+
+    const currentInventory = await overviewPage.getCurrentInventoryCount();
+    const barnsMenuCount = await overviewPage.getBarnsMenuCurrentRoomCount();
+
+    const { existing, onboarded } = await overviewPage.getExistingAndOnboardedFromChartTooltip();
+    const tagsDeployedThisWeek = existing + onboarded;
+
+    await overviewPage.openBarnLayoutPopup();
+    const dialog = overviewPage.getBarnLayoutDialog();
+    await expect(dialog).toBeVisible({ timeout: 10000 });
+    const zoneDiagramRows: string[] = await dialog.evaluate((root: HTMLElement) => {
+      const rows = root.querySelectorAll('div[class*="justify-evenly"]');
+      const result: string[] = [];
+      rows.forEach((row) => {
+        const ps = row.querySelectorAll('p');
+        if (ps.length < 3) return;
+        const normal = (ps[0]?.textContent ?? '').trim();
+        const subOptimal = (ps[1]?.textContent ?? '').trim();
+        const poor = (ps[2]?.textContent ?? '').trim();
+        const card = row.parentElement?.parentElement;
+        if (!card) return;
+        const nameEl = card.querySelector('p[class*="blue-500"]');
+        const zoneName = (nameEl?.textContent ?? '').trim();
+        if (zoneName) result.push(`${zoneName}: Normal=${normal}, Sub-optimal=${subOptimal}, Poor=${poor}`);
+      });
+      return result;
+    });
+    const barnLayoutTotal = sumZoneDiagramTotals(zoneDiagramRows);
+    const closeButton = dialog.locator('xpath=..').getByTestId('barn-layout-close');
+    await closeButton.click();
+    await expect(dialog).toBeHidden({ timeout: 5000 });
+
+    const tolerance = 2;
+    expect(
+      Math.abs(currentInventory - tagsDeployedThisWeek),
+      `Current inventory (${currentInventory}) should match Tags Deployed this week (${existing}+${onboarded}=${tagsDeployedThisWeek})`,
+    ).toBeLessThanOrEqual(tolerance);
+
+    if (zoneDiagramRows.length > 0) {
+      expect(
+        currentInventory,
+        `Current inventory (${currentInventory}) should equal total on Barn Layout (${barnLayoutTotal})`,
+      ).toBe(barnLayoutTotal);
+    }
+
+    expect(
+      currentInventory,
+      `Current inventory (${currentInventory}) should equal number of pigs on Barns menu (${barnsMenuCount})`,
+    ).toBe(barnsMenuCount);
+  });
+});
+
+/**
  * Overview - Barn Layout popup (opened via zoom-in on Overview).
  * Covers: popup UI (title, current inventory, zone diagram, legends, compass, close)
  * and consistency of current inventory with Overview panel and Barns menu.
