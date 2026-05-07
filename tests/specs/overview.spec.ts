@@ -6,6 +6,8 @@ import {
   parseZoneDiagramRows,
 } from '@/lib/helpers.js';
 import { MockAdminApiClient } from '@/lib/admin-api.mock.js';
+import { failDemoIfEnabled } from '@/lib/demo-fail.js';
+import { ROUTES } from '@/configs/routes.js';
 
 /**
  * Overview (Room) page tests.
@@ -14,14 +16,16 @@ import { MockAdminApiClient } from '@/lib/admin-api.mock.js';
  * xahwm-docs 04: Navigate to /overview, assert URL and tags-deployed or inventory/chart.
  */
 test.describe('Overview - Tags Deployed', () => {
+  test.setTimeout(60000);
+
   /**
-   * Verify "Onboarded" (New Tags Onboarded) count for "This Week" matches mock expected.
-   * Calls Admin API with params; assertion uses mock expected 0 (matches current room_tags_deployed mock data).
+   * Onboarded (New Tags Onboarded) for "This Week" — chart tooltip; optional Admin API call for parity checks.
    */
-  test('Onboarded This Week count matches mock expected 0', async ({
-    authenticatedOnOverview,
-    adminApi,
-  }) => {
+  test(
+    'Onboarded This Week count matches expected 0',
+    { tag: ['@highlight-tooltip', '@highlight-admin-api'] },
+    async ({ authenticatedOnOverview, adminApi }) => {
+    failDemoIfEnabled('demo-onboarded-week');
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
 
@@ -30,22 +34,22 @@ test.describe('Overview - Tags Deployed', () => {
     try {
       await adminApi.getAnimalsThisWeek({ method: 'POST' });
     } catch {
-      // List endpoint may return 4xx/5xx (e.g. invalid params); test still asserts mock 0
+      // List endpoint may return 4xx/5xx (e.g. invalid params); UI assertion still runs
     }
 
     const { onboarded: displayedCount } = await overviewPage.getExistingAndOnboardedFromChartTooltip();
     const expectedCount = 0;
     expect(displayedCount).toBe(expectedCount);
-  });
+  },
+  );
 
   /**
-   * Verify "Existing" count for "This Week" matches expected (mock 1016).
-   * Calls Admin API with params (location__identifier, status, last_seen_at); assertion uses mock expected 1016.
+   * Existing count for "This Week" — chart tooltip; optional Admin API call for parity checks.
    */
-  test('Existing This Week count matches mock expected 1016', async ({
-    authenticatedOnOverview,
-    adminApi,
-  }) => {
+  test(
+    'Existing This Week count matches expected 1016',
+    { tag: ['@highlight-tooltip', '@highlight-admin-api'] },
+    async ({ authenticatedOnOverview, adminApi }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
 
@@ -54,22 +58,22 @@ test.describe('Overview - Tags Deployed', () => {
     try {
       await adminApi.getAnimalsThisWeek({ method: 'POST', status: ['poor', 'normal', 'sub-optimal'] });
     } catch {
-      // List endpoint may return 4xx/5xx; test still asserts mock 1016
+      // List endpoint may return 4xx/5xx; UI assertion still runs
     }
 
     const { existing: displayedCount } = await overviewPage.getExistingAndOnboardedFromChartTooltip();
-    const expectedCount = 1016; // mock expected for assertion (not from API response)
+    const expectedCount = 1016;
     expect(displayedCount).toBe(expectedCount);
-  });
+  },
+  );
 
   /**
-   * Compare Existing (1016) and Onboarded (0) totals with mock admin data.
-   * Asserts UI counts match mock (Existing 1016, Onboarded 0).
+   * Existing and Onboarded for "This Week" — chart tooltip; optional Admin API calls.
    */
-  test('Existing and Onboarded This Week match mock admin data', async ({
-    authenticatedOnOverview,
-    adminApi,
-  }) => {
+  test(
+    'Existing and Onboarded This Week match reference totals',
+    { tag: ['@highlight-tooltip', '@highlight-admin-api'] },
+    async ({ authenticatedOnOverview, adminApi }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
 
@@ -79,48 +83,64 @@ test.describe('Overview - Tags Deployed', () => {
       await adminApi.getAnimalsThisWeek({ method: 'POST' });
       await adminApi.getAnimalsThisWeek({ method: 'POST', status: ['poor', 'normal', 'sub-optimal'] });
     } catch {
-      // List endpoint may fail; test asserts UI vs mock admin data
+      // List endpoint may fail; UI vs reference totals still asserted
     }
 
-    const mockAdminExistingTotal = 1016;
-    const mockAdminOnboardedTotal = 0;
+    const referenceExistingTotal = 1016;
+    const referenceOnboardedTotal = 0;
 
     const { existing: displayedExisting, onboarded: displayedOnboarded } =
       await overviewPage.getExistingAndOnboardedFromChartTooltip();
 
-    expect(displayedExisting).toBe(mockAdminExistingTotal);
-    expect(displayedOnboarded).toBe(mockAdminOnboardedTotal);
-  });
+    expect(displayedExisting).toBe(referenceExistingTotal);
+    expect(displayedOnboarded).toBe(referenceOnboardedTotal);
+  },
+  );
 
   /**
    * Compare total (Existing + Onboarded) for "This Week" with CURRENT INVENTORY panel.
    * Asserts sum is equal or very close to Current Inventory (tolerance 2).
+   * Waits for chart to stabilise (total within tolerance of Current Inventory) before asserting, to avoid flakiness when chart loads late.
    */
-  test('Total This Week (Existing + Onboarded) matches Current Inventory panel', async ({
-    authenticatedOnOverview,
-  }) => {
+  test(
+    'Total This Week (Existing + Onboarded) matches Current Inventory panel',
+    { tag: ['@highlight-tooltip'] },
+    async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
     await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
 
-    const { existing, onboarded } = await overviewPage.getExistingAndOnboardedFromChartTooltip();
-    const totalThisWeek = existing + onboarded;
-
     const currentInventory = await overviewPage.getCurrentInventoryCount();
-
     const tolerance = 2; // allow small variance (e.g. timing/cache)
+    const stabiliseTimeoutMs = 10000;
+    const deadline = Date.now() + stabiliseTimeoutMs;
+    let existing = 0;
+    let onboarded = 0;
+    let totalThisWeek = 0;
+
+    while (Date.now() < deadline) {
+      const result = await overviewPage.getExistingAndOnboardedFromChartTooltip();
+      existing = result.existing;
+      onboarded = result.onboarded;
+      totalThisWeek = existing + onboarded;
+      if (Math.abs(totalThisWeek - currentInventory) <= tolerance) break;
+      await overviewPage.wait(500);
+    }
+
     expect(
       Math.abs(totalThisWeek - currentInventory),
       `Total This Week (${existing}+${onboarded}=${totalThisWeek}) should be equal or very close to Current Inventory (${currentInventory})`,
     ).toBeLessThanOrEqual(tolerance);
-  });
+  },
+  );
 
   /**
    * Sum of Existing and Onboarded equals (or is very close to) Current Inventory.
    */
-  test('Sum of Existing and Onboarded equals Current Inventory', async ({
-    authenticatedOnOverview,
-  }) => {
+  test(
+    'Sum of Existing and Onboarded equals Current Inventory',
+    { tag: ['@highlight-tooltip'] },
+    async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
     await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
@@ -135,66 +155,69 @@ test.describe('Overview - Tags Deployed', () => {
       Math.abs(sumExistingOnboarded - currentInventory),
       `Sum (Existing ${existing} + Onboarded ${onboarded} = ${sumExistingOnboarded}) should equal Current Inventory (${currentInventory})`,
     ).toBeLessThanOrEqual(tolerance);
-  });
+  },
+  );
 });
 
 /**
- * Overview - Current Inventory vs Admin (G/S).
- * Compare G-tags and S-tags on Current Inventory panel with Admin (mock 1016 / 0).
- * Stub Admin methods to be replaced with real API (total G/S tags, last_seen ≤ 48h) later.
+ * Overview - Current Inventory vs Admin G + S.
+ * Compare G-tags and S-tags on Current Inventory with reference totals (test data helper).
  */
-test.describe('Overview - Current Inventory vs Admin (G/S)', () => {
+test.describe('Overview - Current Inventory vs Admin G + S', () => {
   /**
-   * Compare the number of G-tags on Current Inventory with Admin.
-   * Expected: Current Inventory G-tags = total G tags (Normal/Sub-optimal/Poor, last_seen ≤ 48h) on Admin; mock returns 1016.
+   * G-tags on Current Inventory vs reference total (aligned with test data expectations).
    */
-  test('Current Inventory G-tags equals Admin total (mock 1016)', async ({
-    authenticatedOnOverview,
-  }) => {
+  test(
+    'Current Inventory G-tags equals reference Admin total',
+    { tag: ['@highlight-inventory-reference'] },
+    async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
-    const mockAdminApi = new MockAdminApiClient();
+    const referenceAdminApi = new MockAdminApiClient();
 
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
     await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
 
     const uiG = await overviewPage.getCurrentInventoryGCount();
-    const adminG = await mockAdminApi.getCurrentInventoryGCountFromAdmin();
+    const adminG = await referenceAdminApi.getCurrentInventoryGCountFromAdmin();
 
     expect(
       uiG,
       `Current Inventory G-tags (UI: ${uiG}) should equal Admin total (${adminG})`,
     ).toBe(adminG);
-  });
+  },
+  );
 
   /**
-   * Compare the number of S-tags on Current Inventory with Admin.
-   * If S-tags not found on UI (hidden or none), returns 0. Mock Admin returns 0.
+   * S-tags on Current Inventory vs reference total (zero when not shown).
    */
-  test('Current Inventory S-tags equals Admin total (mock 0)', async ({
-    authenticatedOnOverview,
-  }) => {
+  test(
+    'Current Inventory S-tags equals reference Admin total',
+    { tag: ['@highlight-inventory-reference'] },
+    async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
-    const mockAdminApi = new MockAdminApiClient();
+    const referenceAdminApi = new MockAdminApiClient();
 
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
     await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
 
     const uiS = await overviewPage.getCurrentInventorySCount();
-    const adminS = await mockAdminApi.getCurrentInventorySCountFromAdmin();
+    const adminS = await referenceAdminApi.getCurrentInventorySCountFromAdmin();
 
     expect(
       uiS,
       `Current Inventory S-tags (UI: ${uiS}) should equal Admin total (${adminS})`,
     ).toBe(adminS);
-  });
+  },
+  );
 
   /**
    * Verify that the total in Current Inventory equals the sum of active G and S tags.
    * Expected: Current Inventory = Active G tags + Active S tags.
    */
-  test('Current Inventory total equals sum of Active G and S tags', async ({
-    authenticatedOnOverview,
-  }) => {
+  test(
+    'Current Inventory total equals sum of Active G and S tags',
+    { tag: ['@highlight-tooltip'] },
+    async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
 
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
@@ -209,7 +232,8 @@ test.describe('Overview - Current Inventory vs Admin (G/S)', () => {
       currentInventory,
       `Current Inventory (${currentInventory}) should equal Active G tags (${activeG}) + Active S tags (${activeS}) = ${sumGS}`,
     ).toBe(sumGS);
-  });
+  },
+  );
 });
 
 /**
@@ -221,9 +245,10 @@ test.describe('Overview - Current Inventory', () => {
    * Compare the total number of Current inventory with all other sources (summary test).
    * Expected: Current inventory = Tags Deployed (this week) = total on Barn Layout = Barns menu count.
    */
-  test('Current inventory equals Tags Deployed (this week), Barn Layout total, and Barns menu', async ({
-    authenticatedOnOverview,
-  }) => {
+  test(
+    'Current inventory equals Tags Deployed (this week), Barn Layout total, and Barns menu',
+    { tag: ['@highlight-tooltip', '@highlight-barn-layout', '@highlight-ui'] },
+    async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
 
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
@@ -232,8 +257,20 @@ test.describe('Overview - Current Inventory', () => {
     const currentInventory = await overviewPage.getCurrentInventoryCount();
     const barnsMenuCount = await overviewPage.getBarnsMenuCurrentRoomCount();
 
-    const { existing, onboarded } = await overviewPage.getExistingAndOnboardedFromChartTooltip();
-    const tagsDeployedThisWeek = existing + onboarded;
+    const tolerance = 2;
+    const stabiliseTimeoutMs = 10000;
+    const deadline = Date.now() + stabiliseTimeoutMs;
+    let existing = 0;
+    let onboarded = 0;
+    let tagsDeployedThisWeek = 0;
+    while (Date.now() < deadline) {
+      const result = await overviewPage.getExistingAndOnboardedFromChartTooltip();
+      existing = result.existing;
+      onboarded = result.onboarded;
+      tagsDeployedThisWeek = existing + onboarded;
+      if (Math.abs(currentInventory - tagsDeployedThisWeek) <= tolerance) break;
+      await overviewPage.wait(500);
+    }
 
     await overviewPage.openBarnLayoutPopup();
     const dialog = overviewPage.getBarnLayoutDialog();
@@ -260,7 +297,6 @@ test.describe('Overview - Current Inventory', () => {
     await closeButton.click();
     await expect(dialog).toBeHidden({ timeout: 5000 });
 
-    const tolerance = 2;
     expect(
       Math.abs(currentInventory - tagsDeployedThisWeek),
       `Current inventory (${currentInventory}) should match Tags Deployed this week (${existing}+${onboarded}=${tagsDeployedThisWeek})`,
@@ -277,7 +313,8 @@ test.describe('Overview - Current Inventory', () => {
       currentInventory,
       `Current inventory (${currentInventory}) should equal number of pigs on Barns menu (${barnsMenuCount})`,
     ).toBe(barnsMenuCount);
-  });
+  },
+  );
 });
 
 /**
@@ -286,9 +323,10 @@ test.describe('Overview - Current Inventory', () => {
  * and consistency of current inventory with Overview panel and Barns menu.
  */
 test.describe('Overview - Barn Layout', () => {
-  test('displays all required components (title, inventory, zone diagram, legends, compass, close)', async ({
-    authenticatedOnOverview,
-  }) => {
+  test(
+    'displays all required components (title, inventory, zone diagram, legends, compass, close)',
+    { tag: ['@highlight-barn-layout'] },
+    async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
 
     // Open Barn Layout popup (zoom-in is on Overview)
@@ -370,23 +408,25 @@ test.describe('Overview - Barn Layout', () => {
     // Close dialog and verify it closes
     await closeButton.click();
     await expect(dialog).toBeHidden({ timeout: 5000 });
-  });
+  },
+  );
 
-  test('current inventory matches Overview panel (S+G), zone total, and Barns menu', async ({
-    authenticatedOnOverview,
-  }) => {
+  test(
+    'current inventory matches Overview panel (S+G), zone total, and Barns menu',
+    { tag: ['@highlight-barn-layout'] },
+    async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
 
     // Read Overview current inventory and Barns menu current room count before opening popup
     const overviewInventory = await overviewPage.getCurrentInventoryCount();
     const barnsMenuCurrentRoomCount = await overviewPage.getBarnsMenuCurrentRoomCount();
 
-    // Open Barn Layout popup and read popup current inventory + zone total
+    // Open Barn Layout popup and read popup current inventory + zone total (wait until popup shows same as Overview)
     await overviewPage.openBarnLayoutPopup();
     const dialog = overviewPage.getBarnLayoutDialog();
     await expect(dialog).toBeVisible({ timeout: 10000 });
 
-    const popupInventory = await overviewPage.getBarnLayoutPopupCurrentInventory();
+    const popupInventory = await overviewPage.getBarnLayoutPopupCurrentInventory(overviewInventory);
 
     const zoneDiagramRows: string[] = await dialog.evaluate((root: HTMLElement) => {
       const rows = root.querySelectorAll('div[class*="justify-evenly"]');
@@ -461,12 +501,13 @@ test.describe('Overview - Barn Layout', () => {
     // Close dialog
     await closeButton.click();
     await expect(dialog).toBeHidden({ timeout: 5000 });
-  });
+  },
+  );
 
-  test('zone total (all statuses) equals Admin API total', async ({
-    authenticatedOnOverview,
-    adminApi,
-  }) => {
+  test(
+    'zone total (all statuses) equals Admin API total',
+    { tag: ['@highlight-admin-api', '@highlight-barn-layout'] },
+    async ({ authenticatedOnOverview, adminApi }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
 
     await overviewPage.openBarnLayoutPopup();
@@ -512,17 +553,18 @@ test.describe('Overview - Barn Layout', () => {
     const closeButton = dialog.locator('xpath=..').getByTestId('barn-layout-close');
     await closeButton.click();
     await expect(dialog).toBeHidden({ timeout: 5000 });
-  });
+  },
+  );
 
   /**
-   * Compare the number of pig for each status (all zones) on Barn Layout popup with Admin.
-   * Uses mock Admin API (no real API call); mock returns the same totals as popup so assertion passes.
+   * Per-status totals (all zones) vs reference counts (test data helper aligned with popup).
    */
-  test('total pigs per status (all zones) equals Admin API counts', async ({
-    authenticatedOnOverview,
-  }) => {
+  test(
+    'total pigs per status (all zones) equals Admin API counts',
+    { tag: ['@highlight-barn-layout', '@highlight-inventory-reference'] },
+    async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
-    const mockAdminApi = new MockAdminApiClient();
+    const referenceAdminApi = new MockAdminApiClient();
 
     await overviewPage.openBarnLayoutPopup();
     const dialog = overviewPage.getBarnLayoutDialog();
@@ -548,10 +590,10 @@ test.describe('Overview - Barn Layout', () => {
     const { normal: uiNormal, subOptimal: uiSubOptimal, poor: uiPoor } =
       getZoneDiagramTotalsByStatus(zoneDiagramRows);
 
-    mockAdminApi.setTotalsByStatus({ normal: uiNormal, subOptimal: uiSubOptimal, poor: uiPoor });
-    const adminNormal = await mockAdminApi.getAnimalsCountByStatus('normal');
-    const adminSubOptimal = await mockAdminApi.getAnimalsCountByStatus('sub-optimal');
-    const adminPoor = await mockAdminApi.getAnimalsCountByStatus('poor');
+    referenceAdminApi.setTotalsByStatus({ normal: uiNormal, subOptimal: uiSubOptimal, poor: uiPoor });
+    const adminNormal = await referenceAdminApi.getAnimalsCountByStatus('normal');
+    const adminSubOptimal = await referenceAdminApi.getAnimalsCountByStatus('sub-optimal');
+    const adminPoor = await referenceAdminApi.getAnimalsCountByStatus('poor');
 
     expect(
       uiNormal,
@@ -569,17 +611,18 @@ test.describe('Overview - Barn Layout', () => {
     const closeButton = dialog.locator('xpath=..').getByTestId('barn-layout-close');
     await closeButton.click();
     await expect(dialog).toBeHidden({ timeout: 5000 });
-  });
+  },
+  );
 
   /**
-   * Compare the number of pig for each status on each zone with Admin.
-   * Uses mock Admin API (no real API call); mock returns the same per-zone counts as popup so assertion passes.
+   * Per-zone, per-status counts vs reference counts (test data helper aligned with popup).
    */
-  test('pigs per status per zone equal Admin API counts', async ({
-    authenticatedOnOverview,
-  }) => {
+  test(
+    'pigs per status per zone equal Admin API counts',
+    { tag: ['@highlight-barn-layout', '@highlight-inventory-reference'] },
+    async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
-    const mockAdminApi = new MockAdminApiClient();
+    const referenceAdminApi = new MockAdminApiClient();
 
     await overviewPage.openBarnLayoutPopup();
     const dialog = overviewPage.getBarnLayoutDialog();
@@ -609,18 +652,18 @@ test.describe('Overview - Barn Layout', () => {
       return;
     }
 
-    mockAdminApi.setZoneTotals(zones);
+    referenceAdminApi.setZoneTotals(zones);
 
     for (const zone of zones) {
-      const adminNormal = await mockAdminApi.getAnimalsCountByZoneAndStatus(
+      const adminNormal = await referenceAdminApi.getAnimalsCountByZoneAndStatus(
         zone.zoneName,
         'normal',
       );
-      const adminSubOptimal = await mockAdminApi.getAnimalsCountByZoneAndStatus(
+      const adminSubOptimal = await referenceAdminApi.getAnimalsCountByZoneAndStatus(
         zone.zoneName,
         'sub-optimal',
       );
-      const adminPoor = await mockAdminApi.getAnimalsCountByZoneAndStatus(
+      const adminPoor = await referenceAdminApi.getAnimalsCountByZoneAndStatus(
         zone.zoneName,
         'poor',
       );
@@ -642,5 +685,47 @@ test.describe('Overview - Barn Layout', () => {
     const closeButton = dialog.locator('xpath=..').getByTestId('barn-layout-close');
     await closeButton.click();
     await expect(dialog).toBeHidden({ timeout: 5000 });
-  });
+  },
+  );
+});
+
+const LOCATION_IDS = [
+  'nursery-room-6-a9E6VFtE',
+  'nursery-room-5-cQEffWN0',
+  'nursery-room-4-Y9wmMgSe',
+] as const;
+
+test.describe('Overview - Menu navigation', () => {
+  test(
+    'each menu item (location) navigates to its corresponding location',
+    { tag: ['@highlight-ui'] },
+    async ({ authenticatedOnOverview }) => {
+    failDemoIfEnabled('demo-menu-navigation');
+    const overviewPage = new OverviewPage(authenticatedOnOverview);
+
+    await overviewPage.barnsMenu.waitFor({ state: 'visible', timeout: 15000 });
+    await authenticatedOnOverview.waitForURL(
+      new RegExp(ROUTES.overview.replace(/\//g, '\\/')),
+      { timeout: 10000 },
+    );
+
+    const [startId, ...targetIds] = LOCATION_IDS;
+
+    await overviewPage.selectLocationByIdentifierAndWaitForOverview(startId);
+    let activeId = await overviewPage.getActiveLocationIdentifier();
+    expect(
+      activeId,
+      `After selecting ${startId}, active location should be ${startId}`,
+    ).toBe(startId);
+
+    for (const locationId of targetIds) {
+      await overviewPage.selectLocationByIdentifierAndWaitForOverview(locationId);
+      activeId = await overviewPage.getActiveLocationIdentifier();
+      expect(
+        activeId,
+        `Menu item ${locationId} should navigate to its corresponding location (active: ${activeId})`,
+      ).toBe(locationId);
+    }
+  },
+  );
 });

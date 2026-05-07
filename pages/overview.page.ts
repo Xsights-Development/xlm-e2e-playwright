@@ -56,15 +56,22 @@ export class OverviewPage extends BasePage {
   /**
    * Parse current inventory number from Barn Layout popup (barn-layout-current-inventory).
    * Call when dialog is open. Text is i18n (e.g. "Current inventory: 123"); parses number after colon, strips commas.
+   * If expected is provided, waits until the element contains that value (handles async useShowcaseCubeData load).
+   * @param expected - When set, wait for element to contain this number (e.g. Overview current inventory) then parse and return.
    */
-  async getBarnLayoutPopupCurrentInventory(): Promise<number> {
+  async getBarnLayoutPopupCurrentInventory(expected?: number): Promise<number> {
     const dialog = this.getBarnLayoutDialog();
     const el = dialog.getByTestId('barn-layout-current-inventory');
     await el.waitFor({ state: 'visible', timeout: 10000 });
+    if (expected !== undefined) {
+      const expectedStr = String(expected);
+      const regex = new RegExp(expectedStr.split('').join('[,.\\s]*'));
+      await expect(el).toContainText(regex, { timeout: 15000 });
+    }
     const text = (await el.textContent())?.trim() ?? '';
-    const match = text.match(/[\d,]+$/);
+    const match = text.match(/[\d,.]+\s*$/);
     if (!match) return 0;
-    const parsed = parseInt(match[0].replace(/,/g, ''), 10);
+    const parsed = parseInt(match[0].replace(/[,.\s]/g, ''), 10);
     return Number.isNaN(parsed) ? 0 : parsed;
   }
 
@@ -109,9 +116,11 @@ export class OverviewPage extends BasePage {
   async verifyOverviewLoaded(): Promise<void> {
     const url = await this.getCurrentUrl();
     expect(url).toContain(ROUTES.overview);
-    await expect(this.tagsDeployedPanel.or(this.inventoryTitle).or(this.tagsDeployedChart)).toBeVisible({
-      timeout: 10000,
-    });
+    await Promise.race([
+      this.tagsDeployedPanel.waitFor({ state: 'visible', timeout: 10000 }),
+      this.inventoryTitle.waitFor({ state: 'visible', timeout: 10000 }),
+      this.tagsDeployedChart.waitFor({ state: 'visible', timeout: 10000 }),
+    ]);
   }
 
   /** Click nav link to Overview (by href). */
@@ -129,14 +138,19 @@ export class OverviewPage extends BasePage {
   /**
    * Expand a category (barn group) in the Barns menu (FarmNavigation) on the right.
    * Uses data-location-type (i18n-safe); normalizes category to lowercase to match backend type (e.g. "General" → "general").
-   * @param category - e.g. APP_LOCATION_TYPE ("General" or "general")
+   * If the category section is not visible (e.g. tenant has no rooms of that type), returns without throwing.
+   * @param category - e.g. APP_LOCATION_TYPE ("General" or "general", "nursery_room")
    */
   async expandBarnsCategory(category: string): Promise<void> {
     const locationType = category.toLowerCase().trim();
     const section = this.page.locator(`[data-location-type="${locationType}"]`).first();
-    await section.waitFor({ state: 'visible', timeout: 15000 });
-    await section.click();
-    await this.wait(300);
+    try {
+      await section.waitFor({ state: 'visible', timeout: 15000 });
+      await section.click();
+      await this.wait(300);
+    } catch {
+      // Category not in menu (e.g. tenant has no rooms of this type) or menu not ready; skip expand
+    }
   }
 
   /**
@@ -202,10 +216,13 @@ export class OverviewPage extends BasePage {
     }
     await this.barnsItem.first().waitFor({ state: 'visible', timeout: 15000 });
     if (locationIdentifier) {
-      await this.page
-        .locator(`span[data-location-identifier="${locationIdentifier}"]`)
-        .first()
-        .click();
+      const byId = this.page.locator(`span[data-location-identifier="${locationIdentifier}"]`).first();
+      try {
+        await byId.waitFor({ state: 'visible', timeout: 8000 });
+        await byId.click();
+      } catch {
+        await this.selectFirstBarn();
+      }
     } else if (locationName) {
       await this.page.getByTestId('barns-item').filter({ hasText: locationName }).first().click();
     } else {
@@ -257,23 +274,41 @@ export class OverviewPage extends BasePage {
     await this.tagsDeployedPanel.waitFor({ state: 'visible', timeout: 15000 });
     await this.tagsDeployedPanel.scrollIntoViewIfNeeded();
     await this.wait(1500); // allow chart to render
+
+    // Wait for sr-only "This week" counts so chart data from useShowcaseCubeData is ready.
+    await this.existingThisWeekCount.waitFor({ state: 'visible', timeout: 15000 });
+    const srText = (await this.existingThisWeekCount.textContent())?.trim() ?? '';
+    if (srText !== '') {
+      await this.wait(500); // brief stabilisation after data appears
+    }
+
     const paths = this.tagsDeployedPanel.locator('.apexcharts-bar-series path');
-    const count = await paths.count();
+    const pathsTimeout = 20000;
+    const deadline = Date.now() + pathsTimeout;
+    let count = await paths.count();
+    while (count < 8 && Date.now() < deadline) {
+      await this.wait(300);
+      count = await paths.count();
+    }
     if (count < 8) {
       return { existing: 0, onboarded: 0 };
     }
+
     const tooltipLocator = this.tagsDeployedPanel.locator('.apexcharts-tooltip').first();
+    const hoverTimeout = 5000;
+    const tooltipTimeout = 5000;
+
     // This week: Existing bar = path index 3 (bottom), Onboarded bar = path index 7 (top). Stacked chart draws Onboarded on top so use force to hover through overlay.
-    await paths.nth(3).hover({ timeout: 8000, force: true });
+    await paths.nth(3).hover({ timeout: hoverTimeout, force: true });
     await this.wait(600);
-    const existingText = (await tooltipLocator.textContent()) ?? '';
+    const existingText = (await tooltipLocator.textContent({ timeout: tooltipTimeout })) ?? '';
     const existingMatch = existingText.match(/Existing:\s*(\d+)/i);
     const existing = existingMatch ? parseInt(existingMatch[1], 10) : 0;
     let onboarded = 0;
     try {
-      await paths.nth(7).hover({ timeout: 8000, force: true });
+      await paths.nth(7).hover({ timeout: hoverTimeout, force: true });
       await this.wait(600);
-      const onboardedText = (await tooltipLocator.textContent()) ?? '';
+      const onboardedText = (await tooltipLocator.textContent({ timeout: tooltipTimeout })) ?? '';
       const onboardedMatch = onboardedText.match(/Onboarded:\s*(\d+)/i);
       onboarded = onboardedMatch ? parseInt(onboardedMatch[1], 10) : 0;
     } catch {

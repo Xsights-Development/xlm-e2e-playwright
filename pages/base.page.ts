@@ -160,11 +160,26 @@ export class BasePage {
 
     /**
      * Scroll to element. Waits for the element to be attached and visible before scrolling.
+     * Retries on "Element is not attached to the DOM" (e.g. after re-render).
      * @param locator - Playwright locator
      */
     async scrollToElement(locator: Locator): Promise<void> {
-        await locator.waitFor({ state: 'visible', timeout: 10000 });
-        await locator.scrollIntoViewIfNeeded();
+        const maxAttempts = 3;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                await locator.waitFor({ state: 'visible', timeout: 10000 });
+                await locator.scrollIntoViewIfNeeded({ timeout: 10000 });
+                return;
+            } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                const isDetached = message.includes('not attached') || message.includes('detached');
+                if (isDetached && attempt < maxAttempts) {
+                    await this.wait(300);
+                    continue;
+                }
+                throw err;
+            }
+        }
     }
 
     /**

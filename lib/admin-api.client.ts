@@ -37,7 +37,15 @@ export class AdminApiClient {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: this.username, password: this.password }),
     });
-    const body = (await res.json()) as AdminLoginResponse;
+    const text = await res.text();
+    let body: AdminLoginResponse;
+    try {
+      body = (text ? JSON.parse(text) : {}) as AdminLoginResponse;
+    } catch {
+      throw new Error(
+        `Admin API login returned invalid JSON (${res.status}). URL: ${url}. Body: ${text.slice(0, 200)}. Check ADMIN_URL in .env.`,
+      );
+    }
     if (!res.ok) {
       throw new Error(
         `Admin API login failed (${res.status}): ${body.msg ?? res.statusText}. URL: ${url}. Check ADMIN_URL in .env (use base only, e.g. https://api.staging.xiot.com.au).`,

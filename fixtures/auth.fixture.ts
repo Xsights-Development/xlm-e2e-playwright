@@ -16,7 +16,7 @@ const testLocationIdentifier = process.env.APP_LOCATION_IDENTIFIER ?? undefined;
 /** Clear session (cookies + storage) so preconditions always start from a clean state. */
 async function clearSession(page: Page): Promise<void> {
   await page.context().clearCookies();
-  await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.evaluate(() => {
     try {
       localStorage.clear();
