@@ -107,13 +107,11 @@ export class DashboardPage extends BasePage {
             // Try clicking user menu first
             if (await this.userMenu.isVisible({ timeout: 2000 })) {
                 await this.click(this.userMenu);
-                console.log('✓ User menu opened');
                 return;
             }
         } catch (error) {
             // If user menu not found, try clicking avatar
             await this.click(this.userAvatar);
-            console.log('✓ User menu opened via avatar');
         }
     }
 
@@ -126,7 +124,6 @@ export class DashboardPage extends BasePage {
         await this.logoutButton.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
 
         await this.click(this.logoutButton);
-        console.log('✓ Logout clicked');
     }
 
     /**
@@ -149,6 +146,24 @@ export class DashboardPage extends BasePage {
         } catch (error) {
             return false;
         }
+    }
+
+    /**
+     * Get sidebar nav link that points to the given path (href).
+     * Use for menu navigation tests (i18n-safe; does not rely on label text).
+     */
+    getNavLinkByPath(path: string): Locator {
+        return this.navigationMenu.locator(`a[href="${path}"]`).first();
+    }
+
+    /**
+     * Click the sidebar nav link for the given path and wait for navigation.
+     */
+    async clickNavTo(path: string): Promise<void> {
+        const link = this.getNavLinkByPath(path);
+        await link.waitFor({ state: 'visible', timeout: 10000 });
+        await link.click();
+        await this.page.waitForURL(new RegExp(path.replace(/\//g, '\\/')), { timeout: 15000 });
     }
 
     /**

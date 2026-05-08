@@ -23,6 +23,7 @@ npx playwright install
 - Required: `APP_URL`, `APP_USER`, `APP_PASS`, `APP_TENANT_IDENTIFIER`, `APP_FARM_IDENTIFIER` (or `APP_TENANT`, `APP_FARM`).
 - For Overview tests: `APP_LOCATION_TYPE`, `APP_LOCATION_IDENTIFIER` (Barns → room).
 - Optional: `APP_TAG_ID` for animal tests (default `demo-tag`).
+- **Admin API (data comparison):** `ADMIN_URL`, `ADMIN_USER`, `ADMIN_PASS` – used by fixture `adminApi` to compare webapp data with Admin API (login → token in Cookie header `Authorization="bearer <token>"`).
 
 `.env` is gitignored; do not commit it.
 
@@ -44,8 +45,8 @@ Run from the project root (where `playwright.config.ts` is).
 ## Structure
 
 - **tests/specs/** – Specs (auth, dashboard, overview, animal).
-- **pages/** – Page objects. **fixtures/** – Auth fixtures.
-- **configs/routes.ts** – Route constants. **docs/** – Context and selectors.
+- **pages/** – Page objects. **fixtures/** – Auth and Admin API fixtures.
+- **lib/admin-api.client.ts** – Admin API client (login, get with Cookie auth). **configs/routes.ts**, **configs/admin-api.ts** – Route and Admin API config. **docs/** – Context and selectors.
 
 ```
 tests/specs/
@@ -61,8 +62,9 @@ Auth fixtures in `@/fixtures/auth.fixture.js`:
 
 - **authenticatedDashboard** – Login + tenant + farm; user on dashboard.
 - **authenticatedOnOverview** – Same, then location from Barns (`APP_LOCATION_IDENTIFIER`); user on Overview.
+- **adminApi** – Admin API client (logged in). Use to compare webapp data with Admin API: `adminApi.get('/admin/AnimalGroupAdmin/AnimalAdmin/list', { page: 1, perPage: 10 })`. Token sent via header **Cookie:** `Authorization="bearer <access_token>"`. See `lib/admin-api.client.ts` and `configs/admin-api.ts`.
 
-Set `APP_LOCATION_TYPE` and `APP_LOCATION_IDENTIFIER` in `.env` for Overview specs.
+For Admin-only specs (no browser) use `@/fixtures/admin-api.fixture.js`. Set `APP_LOCATION_TYPE` and `APP_LOCATION_IDENTIFIER` in `.env` for Overview specs.
 
 ## Test cases
 

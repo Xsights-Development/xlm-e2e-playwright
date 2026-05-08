@@ -1,35 +1,46 @@
 {
-  "name": "xlm-e2e-playwright",
-  "version": "1.0.0",
-  "description": "E2E automated tests for XLM App using Playwright",
-  "private": true,
-  "scripts": {
-    "test": "playwright test",
-    "test:headed": "playwright test --headed",
-    "test:ui": "playwright test --ui",
-    "test:chromium": "playwright test --project=chromium",
-    "test:firefox": "playwright test --project=firefox",
-    "test:webkit": "playwright test --project=webkit",
-    "test:parallel": "playwright test --workers=3",
-    "test:sequential": "playwright test --workers=1",
-    "test:debug": "playwright test --debug",
-    "report": "playwright show-report",
-    "browsers": "npx playwright install",
-    "codegen": "playwright codegen"
-  },
-  "keywords": [
-    "xlm",
-    "e2e",
-    "playwright",
-    "testing",
-    "automation"
-  ],
-  "author": "XSights Team",
-  "license": "ISC",
-  "devDependencies": {
-    "@playwright/test": "^1.56.1",
-    "@types/node": "^25.0.10",
-    "dotenv": "^17.2.3",
-    "typescript": "^5.9.3"
-  }
+    "name": "xlm-e2e-playwright",
+    "version": "1.0.0",
+    "description": "E2E automated tests for XLM App using Playwright",
+    "private": true,
+    "scripts": {
+        "test": "playwright test",
+        "test:headed": "playwright test --headed",
+        "test:ui": "playwright test --ui",
+        "test:chromium": "playwright test --project=chromium",
+        "test:firefox": "playwright test --project=firefox",
+        "test:webkit": "playwright test --project=webkit",
+        "test:parallel": "playwright test --workers=3",
+        "test:sequential": "playwright test --workers=1",
+        "test:debug": "playwright test --debug",
+        "report": "playwright show-report reports/html",
+        "browsers": "playwright install chromium",
+        "codegen": "playwright codegen",
+        "debug:admin": "tsx scripts/debug-admin-api.ts",
+
+        "test:tag-deployed": "playwright test overview --grep 'Tags Deployed'",
+        "test:current-inventory": "playwright test overview --grep 'Current Inventory' --grep-invert 'vs Admin'",
+        "test:current-inventory-vs-admin": "playwright test overview --grep 'Current Inventory vs Admin'",
+        "test:barn-layout": "playwright test overview --grep 'Barn Layout'",
+        "test:navigation": "playwright test overview --grep 'Menu navigation'",
+        "test:overview": "playwright test overview",
+
+        "test:tag-deployed:headed": "playwright test --headed --workers=1 overview --grep 'Tags Deployed'",
+        "test:current-inventory:headed": "playwright test --headed overview --grep 'Current Inventory' --grep-invert 'vs Admin'",
+        "test:current-inventory-vs-admin:headed": "playwright test --headed --workers=1 overview --grep 'Current Inventory vs Admin'",
+        "test:barn-layout:headed": "playwright test --headed overview --grep 'Barn Layout'",
+        "test:overview:headed": "playwright test --headed --workers=1 overview",
+        "test:navigation:headed": "playwright test --headed overview --grep 'Menu navigation'",
+        "test:demo-highlight": "playwright test --grep '@highlight-auth-video|@highlight-tooltip|@highlight-admin-api|@highlight-ui|@highlight-barn-layout|@highlight-inventory-reference'",
+        "test:demo-highlight:headed": "playwright test --headed --workers=1 --grep '@highlight-auth-video|@highlight-tooltip|@highlight-admin-api|@highlight-ui|@highlight-barn-layout|@highlight-inventory-reference'",
+        "test:demo-report": "playwright test --workers=1 --grep '@highlight-auth-video|@highlight-tooltip|@highlight-admin-api|@highlight-ui|@highlight-barn-layout|@highlight-inventory-reference' ; playwright show-report reports/html",
+        "test:demo-report:headed": "playwright test --headed --workers=1 --grep '@highlight-auth-video|@highlight-tooltip|@highlight-admin-api|@highlight-ui|@highlight-barn-layout|@highlight-inventory-reference' ; playwright show-report reports/html"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.56.1",
+        "@types/node": "^25.0.10",
+        "dotenv": "^17.2.3",
+        "tsx": "^4.19.2",
+        "typescript": "^5.9.3"
+    }
 }

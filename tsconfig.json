@@ -7,7 +7,8 @@
         "target": "ES2022",
         "module": "NodeNext",
         "lib": [
-            "ES2022"
+            "ES2022",
+            "DOM"
         ],
         "outDir": "./dist",
         "rootDir": "./",

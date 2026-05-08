@@ -2,6 +2,7 @@ import { test as base, Page } from '@playwright/test';
 import { LoginPage } from '@/pages/login.page.js';
 import { DashboardPage } from '@/pages/dashboard.page.js';
 import { OverviewPage } from '@/pages/overview.page.js';
+import { AdminApiClient } from '@/lib/admin-api.client.js';
 import { ROUTES } from '@/configs/routes.js';
 
 const baseURL = process.env.APP_URL ?? 'http://localhost:3000';
@@ -15,7 +16,7 @@ const testLocationIdentifier = process.env.APP_LOCATION_IDENTIFIER ?? undefined;
 /** Clear session (cookies + storage) so preconditions always start from a clean state. */
 async function clearSession(page: Page): Promise<void> {
   await page.context().clearCookies();
-  await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.goto(baseURL, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.evaluate(() => {
     try {
       localStorage.clear();
@@ -33,6 +34,8 @@ type AuthFixtures = {
   authenticatedDashboard: Page;
   /** Precondition 1 + 2: Session cleared, then login + tenant + farm + dashboard, then location selected so we stay on Overview. Use for tests that need Overview context. */
   authenticatedOnOverview: Page;
+  /** Admin API client (logged in). Use to compare webapp data with Admin API. Cookie: Authorization="bearer <token>". */
+  adminApi: AdminApiClient;
 };
 
 export const test = base.extend<AuthFixtures>({
@@ -62,6 +65,12 @@ export const test = base.extend<AuthFixtures>({
       testLocationIdentifier,
     );
     await use(page);
+  },
+
+  adminApi: async ({}, use) => {
+    const client = new AdminApiClient();
+    await client.login();
+    await use(client);
   },
 });
 

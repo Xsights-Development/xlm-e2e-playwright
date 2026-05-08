@@ -159,35 +159,27 @@ export class BasePage {
     }
 
     /**
-     * Scroll to element
+     * Scroll to element. Waits for the element to be attached and visible before scrolling.
+     * Retries on "Element is not attached to the DOM" (e.g. after re-render).
      * @param locator - Playwright locator
      */
     async scrollToElement(locator: Locator): Promise<void> {
-        await locator.scrollIntoViewIfNeeded();
-    }
-
-    /**
-     * Highlight element for visual inspection (e.g. red border, background).
-     * Use in tests when you want to see what is being asserted in headed mode or screenshots.
-     * @param locator - Element to highlight
-     * @param options - border, background, durationMs to show highlight
-     */
-    async highlight(
-        locator: Locator,
-        options?: { border?: string; background?: string; durationMs?: number },
-    ): Promise<void> {
-        const border = options?.border ?? '3px solid red';
-        const background = options?.background ?? 'rgba(255, 255, 0, 0.2)';
-        await locator.evaluate(
-            (el, { b, bg }) => {
-                (el as HTMLElement).style.setProperty('border', b, 'important');
-                (el as HTMLElement).style.setProperty('background-color', bg, 'important');
-                (el as HTMLElement).style.setProperty('box-shadow', '0 0 0 2px rgba(255,0,0,0.5)', 'important');
-            },
-            { b: border, bg: background },
-        );
-        const duration = options?.durationMs ?? 1500;
-        if (duration > 0) await this.wait(duration);
+        const maxAttempts = 3;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                await locator.waitFor({ state: 'visible', timeout: 10000 });
+                await locator.scrollIntoViewIfNeeded({ timeout: 10000 });
+                return;
+            } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                const isDetached = message.includes('not attached') || message.includes('detached');
+                if (isDetached && attempt < maxAttempts) {
+                    await this.wait(300);
+                    continue;
+                }
+                throw err;
+            }
+        }
     }
 
     /**
