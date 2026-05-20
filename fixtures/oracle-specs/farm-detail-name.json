@@ -1,0 +1,11 @@
+{
+  "id": "farm-detail-name",
+  "description": "Farm name vs Admin Farm detail (item by id)",
+  "admin": {
+    "method": "GET",
+    "path": "/admin/FarmGroupAdmin/FarmAdmin/item/{farmId}",
+    "response": {
+      "valuePath": "data.name"
+    }
+  }
+}

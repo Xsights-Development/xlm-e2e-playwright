@@ -3,9 +3,23 @@
  * Cookie value format: Authorization="bearer <access_token>"
  */
 import { ADMIN_API, type AdminLoginResponse } from '@/configs/admin-api.js';
+import {
+  ADMIN_FARM_PATHS,
+  ORACLE_SPEC_IDS,
+  type AdminFarmDetail,
+  type AdminFarmListItem,
+} from '@/configs/admin-farm.js';
+import { getValueByPath, loadOracleSpec, resolveAdminPath } from '@/lib/admin-oracle.js';
 import { buildLastSeenAtString } from '@/lib/helpers.js';
 
 const ANIMAL_ADMIN_LIST_PATH = '/admin/AnimalGroupAdmin/AnimalAdmin/list';
+
+type AdminListResponse<T> = {
+  status?: number;
+  msg?: string;
+  data?: { items?: T[]; total?: number };
+  items?: T[];
+};
 
 /** Status filter for animal list (poor, normal, sub-optimal; API may support more). */
 export type AnimalListStatus = 'poor' | 'normal' | 'sub-optimal';
@@ -227,6 +241,128 @@ export class AdminApiClient {
    * Requires Admin API to support zone/pen filter (e.g. pen__name). Returns null if not supported or request fails.
    * @returns Count from list response, or null if API does not support per-zone or request fails.
    */
+  /**
+   * GET oracle value from fixtures/oracle-specs (path params replace `{farmId}`, `{managerId}`, …).
+   */
+  private async fetchOracleValue(
+    specId: string,
+    pathParams: Record<string, string | number>,
+  ): Promise<string> {
+    const spec = loadOracleSpec(specId);
+    const path = resolveAdminPath(spec.admin.path, pathParams);
+    const method = spec.admin.method ?? 'GET';
+    const valuePath = spec.admin.response.valuePath ?? '';
+
+    const body =
+      method === 'GET'
+        ? await this.get<unknown>(path)
+        : await this.post<unknown>(path, spec.admin.body ?? {});
+
+    const value = getValueByPath(body, valuePath);
+    if (value == null || String(value).trim() === '') {
+      throw new Error(
+        `Admin oracle "${specId}": empty value at "${valuePath}" (${method} ${path})`,
+      );
+    }
+    return String(value).trim();
+  }
+
+  /**
+   * Resolve Admin numeric farm id from UI `data-farm-id` or APP_FARM_IDENTIFIER (via list).
+   */
+  async resolveFarmAdminId(farmKey: string): Promise<string> {
+    const key = farmKey.trim();
+    if (!key) {
+      throw new Error('Admin API: farm key is empty');
+    }
+    if (/^\d+$/.test(key)) {
+      return key;
+    }
+    const row = await this.findFarmRow(key);
+    if (row?.id == null) {
+      throw new Error(
+        `Admin API: no farm id for key "${key}" (${ADMIN_FARM_PATHS.farmList})`,
+      );
+    }
+    return String(row.id);
+  }
+
+  /**
+   * GET /admin/FarmGroupAdmin/FarmAdmin/item/{farmId} — full farm detail from Admin.
+   */
+  async getFarmDetailById(farmId: string): Promise<AdminFarmDetail> {
+    const id = farmId.trim();
+    const res = await this.get<{ data?: AdminFarmDetail }>(
+      `${ADMIN_FARM_PATHS.farmItem}/${id}`,
+    );
+    const data = res.data;
+    if (!data?.name) {
+      throw new Error(`Admin API: farm item not found for id="${id}"`);
+    }
+    return { ...data, id: data.id ?? Number(id) };
+  }
+
+  /**
+   * Find a farm row in Admin Farm table by numeric id, identifier, or name substring.
+   * Prefer `data-farm-id` from the UI when available (Admin numeric id).
+   */
+  async findFarmRow(farmKey: string): Promise<AdminFarmListItem | null> {
+    const key = farmKey.trim();
+    if (!key) return null;
+
+    if (/^\d+$/.test(key)) {
+      const byId = await this.post<AdminListResponse<AdminFarmListItem>>(
+        ADMIN_FARM_PATHS.farmList,
+        { page: 1, perPage: 1, id: key },
+      );
+      const item = byId.data?.items?.[0];
+      if (item) return item;
+    }
+
+    const byIdentifier = await this.post<AdminListResponse<AdminFarmListItem>>(
+      ADMIN_FARM_PATHS.farmList,
+      { page: 1, perPage: 1, identifier: key },
+    );
+    const fromFilter = byIdentifier.data?.items?.[0];
+    if (fromFilter) return fromFilter;
+
+    const list = await this.post<AdminListResponse<AdminFarmListItem>>(
+      ADMIN_FARM_PATHS.farmList,
+      { page: 1, perPage: 200 },
+    );
+    const items = list.data?.items ?? list.items ?? [];
+    const keyLower = key.toLowerCase();
+    return (
+      items.find(
+        (f) =>
+          String(f.id) === key ||
+          String(f.identifier ?? '').toLowerCase() === keyLower ||
+          String(f.name ?? '').toLowerCase() === keyLower,
+      ) ?? null
+    );
+  }
+
+  /**
+   * Farm name from Admin Farm detail (GET item/{farmId}).
+   * @param farmKey - Prefer numeric `data-farm-id`; otherwise resolves id via farm list.
+   */
+  async getFarmNameByIdentifier(farmKey: string): Promise<string> {
+    const farmId = await this.resolveFarmAdminId(farmKey);
+    return this.fetchOracleValue(ORACLE_SPEC_IDS.farmName, { farmId });
+  }
+
+  /**
+   * Manager username from Admin (GET /admin/auth/XAHWMUserAdmin/item/{managerId}).
+   * @param managerId - `data-manager-id` from farm-detail-manager on UI.
+   */
+  async getManagerUsernameById(managerId: string): Promise<string> {
+    const id = managerId.trim();
+    if (!id) {
+      throw new Error('Admin API: manager id is empty');
+    }
+    return this.fetchOracleValue(ORACLE_SPEC_IDS.farmManager, { managerId: id });
+  }
+
   async getAnimalsCountByZoneAndStatus(
     zoneNameOrId: string,
     status: AnimalListStatus,
