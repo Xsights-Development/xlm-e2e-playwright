@@ -17,6 +17,7 @@
         "@playwright/test": "^1.56.1",
         "@types/node": "^25.0.10",
         "dotenv": "^17.2.3",
+        "moment-timezone": "^0.6.2",
         "tsx": "^4.19.2",
         "typescript": "^5.9.3"
     }
