@@ -1,0 +1,11 @@
+{
+  "id": "farm-detail-manager",
+  "description": "Manager display name on dashboard vs Admin XAHWMUserAdmin item (manager id from data-manager-id)",
+  "admin": {
+    "method": "GET",
+    "path": "/admin/auth/XAHWMUserAdmin/item/{managerId}",
+    "response": {
+      "valuePath": "data.username"
+    }
+  }
+}

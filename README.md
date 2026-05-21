@@ -1,130 +1,56 @@
 # XLM E2E Playwright Tests
 
-Automated E2E testing repository for XLM projects using Playwright.
+Automated E2E tests for XLM (xahwm-dashboard) using Playwright.
 
-## 📁 Structure
-```
-xlm-e2e-playwright/
-├── app/          # Tests for my-react-app
-├── admin/        # Tests for my-react-admin
-└── shared/       # Shared utilities
-```
+## Quick start
 
-## 🚀 Quick Start
+1. `npm install` && `npm run browsers`
+2. Copy `.env.example` → `.env` (credentials, `API_BASE_URL`, `CUBE_API_URL`, …)
+3. `npm run test` — full suite (farm + overview projects)
 
-### Prerequisites
-- Node.js 18+
-- npm or yarn
+**Run by area (no extra npm scripts):** see [docs/TESTING.md](docs/TESTING.md).
 
-### Installation
 ```bash
-# Install dependencies
-npm install
-
-# Install Playwright browsers
-npm run install:browsers
+npx playwright test --project=farm
+npx playwright test --project=farm --grep @health
+npx playwright test --project=overview --grep "Tags Deployed"
+npm run probe -- health
 ```
 
-### Running Tests
+## Commands (minimal `package.json`)
 
-#### App Tests
-```bash
-# Run all app tests
-npm run test:app
+| Command | Description |
+|---------|-------------|
+| `npm run test` | All Playwright projects |
+| `npm run test -- --project=farm --grep @contract` | Pass-through CLI |
+| `npm run test:headed` | Visible browser |
+| `npm run test:ui` / `test:debug` | UI / debug mode |
+| `npm run test:report` | HTML report |
+| `npm run probe -- <cmd>` | API/Cube/Admin probes (`help`, `health`, `cube`, …) |
 
-# Run with UI mode
-npm run test:app:ui
+Do **not** add one npm script per test suite — use **`--project`** + **`--grep`** + describe **tags** ([configs/test-tags.ts](configs/test-tags.ts)).
 
-# Run on specific environment
-npm run test:app:local
-npm run test:app:staging
-npm run test:app:prod
+## Layout
+
+```
+tests/specs/     farm.spec.ts, overview.spec.ts
+pages/           Page objects (login selectors in login.page.ts)
+fixtures/        auth.fixture, oracles/
+lib/             api/, cube/, oracles/, ui/ — see lib/README.md
+configs/         app-api, cube-api, cube-queries, test-tags
+scripts/         probe.ts (+ lib/)
+docs/            TESTING.md, e2e/
 ```
 
-#### Admin Tests
-```bash
-# Run all admin tests
-npm run test:admin
+## Env & fixtures
 
-# Run with UI mode
-npm run test:admin:ui
+- **REST:** `appApi` — `lib/api/app-api.client.ts`
+- **Cube:** `cubeApi` — `lib/api/cube-api.client.ts`, oracles `lib/cube/dashboard/oracles.ts`
+- **Admin:** `adminApi` — `lib/api/admin-api.client.ts` (`@business`)
+- **UI session:** `authenticatedDashboardSession` (worker-scoped login)
 
-# Run on specific environment
-npm run test:admin:local
-npm run test:admin:staging
-npm run test:admin:prod
-```
+Details: [docs/E2E-CONTEXT.md](docs/E2E-CONTEXT.md), [docs/TESTING.md](docs/TESTING.md), [docs/PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md).
 
-#### Run Both
-```bash
-# Run all tests (app + admin)
-npm run test:all
+## Reports
 
-# Run smoke tests only
-npm run test:all:smoke
-```
-
-## 📝 Converting Manual Tests
-```bash
-# Convert app manual tests
-npm run convert:app
-
-# Convert admin manual tests
-npm run convert:admin
-```
-
-## 🏷️ Test Tags
-
-- `@smoke` - Critical flows (runs on all environments including production)
-- `@regression` - Full regression tests (local & staging only)
-- `@local` - Local environment only
-- `@staging` - Staging environment only
-- `@production` - Production-safe tests
-- `@app` - App-specific tests
-- `@admin` - Admin-specific tests
-
-## 🌍 Environments
-
-- **local** - http://localhost:3000 (app), http://localhost:4000 (admin)
-- **staging** - https://app-staging.xlm.com, https://admin-staging.xlm.com
-- **prod** - https://app.xlm.com, https://admin.xlm.com
-
-## 📊 Reports
-
-Test reports are generated in:
-- `app/reports/` - App test reports
-- `admin/reports/` - Admin test reports
-
-View reports:
-```bash
-npm run test:app:report
-npm run test:admin:report
-```
-
-## 🧹 Cleaning
-```bash
-# Clean all test artifacts
-npm run clean
-
-# Clean app artifacts only
-npm run clean:app
-
-# Clean admin artifacts only
-npm run clean:admin
-```
-
-## 📖 Documentation
-
-- [App Tests README](./app/README.md)
-- [Admin Tests README](./admin/README.md)
-
-## 🤝 Contributing
-
-1. Create feature branch
-2. Write tests
-3. Run tests locally
-4. Create PR
-
-## 📧 Contact
-
-XLM Team - support@xlm.com
+`npm run test:report`
