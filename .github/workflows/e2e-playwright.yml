@@ -41,22 +41,29 @@ jobs:
       - name: Run E2E tests
         env:
           CI: true
-          APP_URL: ${{ secrets.APP_URL }}
+          # Repository variables (Settings → Actions → Variables)
+          APP_URL: ${{ vars.APP_URL }}
+          APP_TENANT_IDENTIFIER: ${{ vars.APP_TENANT_IDENTIFIER }}
+          APP_FARM_IDENTIFIER: ${{ vars.APP_FARM_IDENTIFIER }}
+          APP_LOCATION_TYPE: ${{ vars.APP_LOCATION_TYPE }}
+          APP_LOCATION_IDENTIFIER: ${{ vars.APP_LOCATION_IDENTIFIER }}
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+          CUBE_API_URL: ${{ vars.CUBE_API_URL }}
+          ADMIN_URL: ${{ vars.ADMIN_URL }}
+          APP_API_FARM_IDENTIFIER: ${{ vars.APP_API_FARM_IDENTIFIER }}
+          APP_TIMEZONE: ${{ vars.APP_TIMEZONE }}
+          # Repository secrets (Settings → Actions → Secrets)
           APP_USER: ${{ secrets.APP_USER }}
           APP_PASS: ${{ secrets.APP_PASS }}
-          APP_TENANT_IDENTIFIER: ${{ secrets.APP_TENANT_IDENTIFIER }}
-          APP_FARM_IDENTIFIER: ${{ secrets.APP_FARM_IDENTIFIER }}
-          APP_LOCATION_TYPE: ${{ secrets.APP_LOCATION_TYPE }}
-          APP_LOCATION_IDENTIFIER: ${{ secrets.APP_LOCATION_IDENTIFIER }}
-          API_BASE_URL: ${{ secrets.API_BASE_URL }}
-          CUBE_API_URL: ${{ secrets.CUBE_API_URL }}
-          ADMIN_URL: ${{ secrets.ADMIN_URL }}
           ADMIN_USER: ${{ secrets.ADMIN_USER }}
           ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
-          APP_API_FARM_IDENTIFIER: ${{ secrets.APP_API_FARM_IDENTIFIER }}
-          APP_TIMEZONE: ${{ secrets.APP_TIMEZONE }}
         run: |
           set -euo pipefail
+          if [ -z "${APP_URL}" ]; then
+            echo "::error::APP_URL is empty — add repository variable APP_URL (not secret)"
+            exit 1
+          fi
+          echo "Using APP_URL host: $(echo "$APP_URL" | sed -E 's|^(https?://[^/]+).*|\1|')"
           CMD=(npx playwright test)
           PROJECT="${{ github.event.inputs.project }}"
           GREP="${{ github.event.inputs.grep }}"
