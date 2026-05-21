@@ -3,24 +3,9 @@
  */
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import type { OracleSpec } from './types.js';
 
-export type OracleSpec = {
-  id: string;
-  description?: string;
-  admin: {
-    method?: 'GET' | 'POST';
-    path: string;
-    query?: Record<string, string>;
-    body?: Record<string, string>;
-    response: {
-      valuePath?: string;
-      itemsPath?: string;
-      matchField?: string;
-    };
-  };
-};
-
-const SPECS_DIR = join(process.cwd(), 'fixtures', 'oracle-specs');
+const SPECS_DIR = join(process.cwd(), 'fixtures', 'oracles');
 
 export function loadOracleSpec(id: string): OracleSpec {
   const path = join(SPECS_DIR, `${id}.json`);

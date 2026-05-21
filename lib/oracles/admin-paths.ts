@@ -1,6 +1,6 @@
 /**
  * Admin API paths for Farm dashboard E2E oracles.
- * Item routes: GET .../item/{id} (see fixtures/oracle-specs/*.json).
+ * Item routes: GET .../item/{id} (see fixtures/oracles/*.json).
  */
 export const ADMIN_FARM_PATHS = {
   farmList: '/admin/FarmGroupAdmin/FarmAdmin/list',

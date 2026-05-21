@@ -8,8 +8,8 @@ import {
   ORACLE_SPEC_IDS,
   type AdminFarmDetail,
   type AdminFarmListItem,
-} from '@/configs/admin-farm.js';
-import { getValueByPath, loadOracleSpec, resolveAdminPath } from '@/lib/admin-oracle.js';
+} from '@/lib/oracles/admin-paths.js';
+import { getValueByPath, loadOracleSpec, resolveAdminPath } from '@/lib/oracles/loader.js';
 import { buildLastSeenAtString } from '@/lib/helpers.js';
 
 const ANIMAL_ADMIN_LIST_PATH = '/admin/AnimalGroupAdmin/AnimalAdmin/list';
@@ -242,7 +242,7 @@ export class AdminApiClient {
    * @returns Count from list response, or null if API does not support per-zone or request fails.
    */
   /**
-   * GET oracle value from fixtures/oracle-specs (path params replace `{farmId}`, `{managerId}`, …).
+   * GET oracle value from fixtures/oracles (path params replace `{farmId}`, `{managerId}`, …).
    */
   private async fetchOracleValue(
     specId: string,

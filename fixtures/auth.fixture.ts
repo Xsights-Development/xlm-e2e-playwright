@@ -2,7 +2,9 @@ import { test as base, Page, BrowserContext } from '@playwright/test';
 import { LoginPage } from '@/pages/login.page.js';
 import { DashboardPage } from '@/pages/dashboard.page.js';
 import { OverviewPage } from '@/pages/overview.page.js';
-import { AdminApiClient } from '@/lib/admin-api.client.js';
+import { AdminApiClient } from '@/lib/api/admin-api.client.js';
+import { AppApiClient } from '@/lib/api/app-api.client.js';
+import { CubeApiClient } from '@/lib/api/cube-api.client.js';
 import { ROUTES } from '@/configs/routes.js';
 
 const baseURL = process.env.APP_URL ?? 'http://localhost:3000';
@@ -89,13 +91,17 @@ type AuthFixtures = {
   authenticatedDashboard: Page;
   /**
    * Same as authenticatedDashboard but login once per worker; re-login only if session expired (sign-in).
-   * Pair with test.describe.configure({ mode: 'serial' }) when tests share UI state.
+   * Use with --project=farm or --project=overview (workers=1 in playwright.config). Avoid describe serial mode.
    */
   authenticatedDashboardSession: Page;
   /** Precondition 1 + 2: Session cleared, then login + tenant + farm + dashboard, then location selected so we stay on Overview. Use for tests that need Overview context. */
   authenticatedOnOverview: Page;
   /** Admin API client (logged in). Use to compare webapp data with Admin API. Cookie: Authorization="bearer <token>". */
   adminApi: AdminApiClient;
+  /** App API client (logged in). Use for @contract tests vs same REST the UI calls (Bearer + tenant/farm headers). */
+  appApi: AppApiClient;
+  /** Cube.js client (token from App API POST /cube/token). Use for @contract weekly chart tests. */
+  cubeApi: CubeApiClient;
 };
 
 type AuthWorkerFixtures = {
@@ -145,6 +151,17 @@ export const test = base.extend<AuthFixtures, AuthWorkerFixtures>({
   adminApi: async ({}, use) => {
     const client = new AdminApiClient();
     await client.login();
+    await use(client);
+  },
+
+  appApi: async ({}, use) => {
+    const client = new AppApiClient();
+    await client.login();
+    await use(client);
+  },
+
+  cubeApi: async ({ appApi }, use) => {
+    const client = await CubeApiClient.fromAppApi(appApi);
     await use(client);
   },
 });

@@ -9,17 +9,14 @@ export default defineConfig({
   testIgnore: ['**/node_modules/**'],
   outputDir: './results',
 
-  // Timeouts
-  timeout: 30 * 1000,
+  timeout: 30_000,
   globalTimeout: 60 * 60 * 1000,
 
-  // Test execution
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 2 : undefined,
 
-  // Reporters
   reporter: [
     ['html', { outputFolder: './reports/html', open: 'never' }],
     ['json', { outputFile: './reports/results.json' }],
@@ -27,7 +24,6 @@ export default defineConfig({
     ['list'],
   ],
 
-  // Browser options
   use: {
     baseURL: process.env.APP_URL || 'http://localhost:3000',
     headless: !isHeaded,
@@ -36,14 +32,23 @@ export default defineConfig({
     video: 'retain-on-failure',
     viewport: { width: 1920, height: 1200 } as ViewportSize,
     ignoreHTTPSErrors: true,
-    actionTimeout: 10 * 1000,
-    navigationTimeout: 30 * 1000,
+    actionTimeout: 10_000,
+    navigationTimeout: 30_000,
   },
 
-  // Projects (browsers)
+  // One project per major spec file — workers=1 for shared browser session fixtures.
+  // Run: npx playwright test --project=farm --grep @health
   projects: [
     {
-      name: 'chromium',
+      name: 'farm',
+      testMatch: /farm\.spec\.ts$/,
+      workers: 1,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1200 } },
+    },
+    {
+      name: 'overview',
+      testMatch: /overview\.spec\.ts$/,
+      workers: 1,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1200 } },
     },
   ],
