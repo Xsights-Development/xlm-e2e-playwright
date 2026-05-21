@@ -1,5 +1,5 @@
 import { test as base } from '@playwright/test';
-import { AdminApiClient } from '@/lib/admin-api.client.js';
+import { AdminApiClient } from '@/lib/api/admin-api.client.js';
 
 type AdminApiFixtures = {
   /** Admin API client; already logged in. Use for comparing webapp data with Admin API (e.g. adminApi.get('/admin/...')). */

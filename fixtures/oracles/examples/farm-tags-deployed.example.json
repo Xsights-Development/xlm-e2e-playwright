@@ -1,0 +1,33 @@
+{
+  "id": "farm-tags-existing",
+  "description": "Tags deployed — Existing active tags per ISO week (template; extend for new metrics)",
+  "businessSourceOfTruth": "admin",
+  "ui": {
+    "route": "/dashboard",
+    "wrapperTestId": "farm-tags-existing",
+    "childTestIdPattern": "farm-tags-existing-{weekKey}",
+    "weekKeys": ["this-week", "prev-1", "prev-2", "prev-3"]
+  },
+  "admin": {
+    "method": "GET",
+    "path": "/api/v1/REPLACE_WITH_QC_ENDPOINT",
+    "query": {
+      "farm_id": "{farmId}",
+      "tenant_id": "{tenantId}",
+      "week": "{weekKey}"
+    },
+    "response": {
+      "valuePath": "data.count",
+      "notes": "Path confirmed from Network tab; adjust after QC capture"
+    }
+  },
+  "alignment": {
+    "timezoneFrom": "tenant",
+    "farmIdFrom": "admin-farm-table",
+    "qcReference": "link or ticket to QC steps"
+  },
+  "dashboardDataPath": {
+    "notes": "UI chart uses Cube — documented for @contract tests only",
+    "cubeMeasures": ["snowflake_inventory_tracking.sum_existing_active_tags"]
+  }
+}

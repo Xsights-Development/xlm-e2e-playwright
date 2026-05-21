@@ -18,9 +18,14 @@ Copy `.env.example` to `.env` and set at least:
 | `APP_TENANT_IDENTIFIER`, `APP_FARM_IDENTIFIER` | Tenant and farm identifiers to select after login (fallback: `APP_TENANT`, `APP_FARM`) |
 | `APP_LOCATION_TYPE` | Barn group type (e.g. `General` or `general`); selected via `data-location-type` (i18n-safe). |
 | `APP_LOCATION_IDENTIFIER` | Room identifier for selection via `data-location-identifier` (i18n-safe). |
-| `ADMIN_URL`, `ADMIN_USER`, `ADMIN_PASS` | Admin API (for data comparison with webapp). Login: POST `{ADMIN_URL}/admin/auth/form/login/api`; then call other APIs with header **Cookie:** `Authorization="bearer <access_token>"`. Fixture `adminApi` in `fixtures/auth.fixture.ts` or `fixtures/admin-api.fixture.ts`; client in `lib/admin-api.client.ts`. |
+| `API_BASE_URL` | Dashboard REST API (= webapp `REACT_APP_ROOT_API`). Fixture `appApi` — `@contract` oracles (e.g. `/stats/tags`). |
+| `CUBE_API_URL` | Cube.js API (= webapp `REACT_APP_CUBE_API`). Fixture `cubeApi` (token via `appApi`). |
+| `APP_API_FARM_IDENTIFIER` | Optional API farm header when `APP_FARM_IDENTIFIER` is a UI display name. |
+| `ADMIN_URL`, `ADMIN_USER`, `ADMIN_PASS` | Admin API (`@business` QC). Fixture `adminApi`; client `lib/api/admin-api.client.ts`. |
 
-For detailed selectors and flows, see **[selectors/login-flow.md](./selectors/login-flow.md)**.
+**API / Cube map:** [docs/e2e/api-and-cube.md](./e2e/api-and-cube.md).
+
+For login selectors and flows, see **[pages/login.page.ts](../pages/login.page.ts)**.
 
 ## 3. Auth and Overview flow
 
@@ -34,9 +39,12 @@ Each precondition clears session (cookies + storage) so tests always start from 
 
 ## 4. Relevant code structure
 
-- **Fixtures:** `fixtures/auth.fixture.ts` – defines `authenticatedDashboard`, `authenticatedOnOverview`, and `adminApi` (Admin API client, for comparing webapp data with API). `fixtures/admin-api.fixture.ts` – Admin API only (no browser).
-- **Admin API:** `lib/admin-api.client.ts` (login, then `get(path, params)` with Cookie header), `configs/admin-api.ts` (base URL, login path, response types).
-- **Page objects:** `pages/login.page.ts`, `pages/overview.page.ts`, `pages/dashboard.page.ts`.
+- **Fixtures:** `fixtures/auth.fixture.ts` – `authenticatedDashboard`, `authenticatedOnOverview`, `appApi`, `cubeApi`, `adminApi`.
+- **App API (REST):** `lib/api/app-api.client.ts`, `configs/app-api.ts` — Bearer + tenant/farm headers.
+- **Cube:** `lib/api/cube-api.client.ts`, `lib/cube/dashboard/`, `configs/cube-api.ts`, `configs/cube-queries.ts`.
+- **Admin API:** `lib/api/admin-api.client.ts`, `configs/admin-api.ts`.
+- **Page objects:** `pages/login.page.ts`, `pages/overview.page.ts`, `pages/dashboard.page.ts`, `pages/farm.page.ts` (farm dashboard hooks).
+- **Farm dashboard tests:** `tests/specs/farm.spec.ts` — `describe` per panel; Farm Details uses `farm-detail-*` hooks and Admin oracles: `GET FarmGroupAdmin/FarmAdmin/item/{farmId}` (name), `GET auth/XAHWMUserAdmin/item/{managerId}` (username). See `fixtures/oracles/`.
 - **Barns → Overview:** `OverviewPage.expandBarnsCategory(category)` (uses `data-location-type`), `OverviewPage.selectLocationAndWaitForOverview(locationName?, category?, locationIdentifier?)`.
 
 ## 5. Running tests
@@ -48,9 +56,9 @@ npm install
 npx playwright test
 ```
 
-Run by area: `npx playwright test tests/specs/auth/`, `tests/specs/overview/`, etc.  
+Run by area: `npx playwright test --project=farm`, `--project=overview` — see [TESTING.md](./TESTING.md).  
 See **README.md** (project root) for more.
 
 ---
 
-When editing E2E or adding new tests, prefer **data-testid** and refer to **docs/selectors/login-flow.md** to avoid breakage when the UI changes.
+When editing E2E or adding new tests, prefer **data-testid** in page objects (`pages/*.page.ts`) to avoid breakage when the UI changes.

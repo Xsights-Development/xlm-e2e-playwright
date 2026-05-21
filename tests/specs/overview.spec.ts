@@ -5,8 +5,7 @@ import {
   getZoneDiagramTotalsByStatus,
   parseZoneDiagramRows,
 } from '@/lib/helpers.js';
-import { MockAdminApiClient } from '@/lib/admin-api.mock.js';
-import { failDemoIfEnabled } from '@/lib/demo-fail.js';
+import { MockAdminApiClient } from '@/lib/api/admin-api.mock.js';
 import { ROUTES } from '@/configs/routes.js';
 
 /**
@@ -23,9 +22,7 @@ test.describe('Overview - Tags Deployed', () => {
    */
   test(
     'Onboarded This Week count matches expected 0',
-    { tag: ['@highlight-tooltip', '@highlight-admin-api'] },
     async ({ authenticatedOnOverview, adminApi }) => {
-    failDemoIfEnabled('demo-onboarded-week');
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
 
@@ -48,7 +45,6 @@ test.describe('Overview - Tags Deployed', () => {
    */
   test(
     'Existing This Week count matches expected 1016',
-    { tag: ['@highlight-tooltip', '@highlight-admin-api'] },
     async ({ authenticatedOnOverview, adminApi }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
@@ -72,7 +68,6 @@ test.describe('Overview - Tags Deployed', () => {
    */
   test(
     'Existing and Onboarded This Week match reference totals',
-    { tag: ['@highlight-tooltip', '@highlight-admin-api'] },
     async ({ authenticatedOnOverview, adminApi }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
@@ -104,7 +99,6 @@ test.describe('Overview - Tags Deployed', () => {
    */
   test(
     'Total This Week (Existing + Onboarded) matches Current Inventory panel',
-    { tag: ['@highlight-tooltip'] },
     async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
@@ -139,7 +133,6 @@ test.describe('Overview - Tags Deployed', () => {
    */
   test(
     'Sum of Existing and Onboarded equals Current Inventory',
-    { tag: ['@highlight-tooltip'] },
     async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
@@ -160,53 +153,42 @@ test.describe('Overview - Tags Deployed', () => {
 });
 
 /**
- * Overview - Current Inventory vs Admin G + S.
- * Compare G-tags and S-tags on Current Inventory with reference totals (test data helper).
+ * Overview - Current Inventory @contract (room scope: GET /stats/room-tags).
  */
-test.describe('Overview - Current Inventory vs Admin G + S', () => {
-  /**
-   * G-tags on Current Inventory vs reference total (aligned with test data expectations).
-   */
+test.describe('Overview - Current Inventory @contract', () => {
   test(
-    'Current Inventory G-tags equals reference Admin total',
-    { tag: ['@highlight-inventory-reference'] },
-    async ({ authenticatedOnOverview }) => {
+    '@contract Current Inventory G-tags match GET /stats/room-tags',
+    async ({ authenticatedOnOverview, appApi }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
-    const referenceAdminApi = new MockAdminApiClient();
 
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
     await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
 
     const uiG = await overviewPage.getCurrentInventoryGCount();
-    const adminG = await referenceAdminApi.getCurrentInventoryGCountFromAdmin();
+    const expected = await appApi.getRoomCurrentInventoryGCount();
 
     expect(
       uiG,
-      `Current Inventory G-tags (UI: ${uiG}) should equal Admin total (${adminG})`,
-    ).toBe(adminG);
+      `Current Inventory G-tags (UI: ${uiG}) vs GET /stats/room-tags (app API: ${expected})`,
+    ).toBe(expected);
   },
   );
 
-  /**
-   * S-tags on Current Inventory vs reference total (zero when not shown).
-   */
   test(
-    'Current Inventory S-tags equals reference Admin total',
-    { tag: ['@highlight-inventory-reference'] },
-    async ({ authenticatedOnOverview }) => {
+    '@contract Current Inventory S-tags match GET /stats/room-tags',
+    async ({ authenticatedOnOverview, appApi }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
-    const referenceAdminApi = new MockAdminApiClient();
 
     await expect(overviewPage.tagsDeployedPanel).toBeVisible({ timeout: 10000 });
     await overviewPage.scrollToElement(overviewPage.tagsDeployedPanel);
 
     const uiS = await overviewPage.getCurrentInventorySCount();
-    const adminS = await referenceAdminApi.getCurrentInventorySCountFromAdmin();
+    const expected = await appApi.getRoomCurrentInventorySCount();
 
     expect(
       uiS,
-      `Current Inventory S-tags (UI: ${uiS}) should equal Admin total (${adminS})`,
-    ).toBe(adminS);
+      `Current Inventory S-tags (UI: ${uiS}) vs GET /stats/room-tags (app API: ${expected})`,
+    ).toBe(expected);
   },
   );
 
@@ -216,7 +198,6 @@ test.describe('Overview - Current Inventory vs Admin G + S', () => {
    */
   test(
     'Current Inventory total equals sum of Active G and S tags',
-    { tag: ['@highlight-tooltip'] },
     async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
 
@@ -247,7 +228,6 @@ test.describe('Overview - Current Inventory', () => {
    */
   test(
     'Current inventory equals Tags Deployed (this week), Barn Layout total, and Barns menu',
-    { tag: ['@highlight-tooltip', '@highlight-barn-layout', '@highlight-ui'] },
     async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
 
@@ -325,7 +305,6 @@ test.describe('Overview - Current Inventory', () => {
 test.describe('Overview - Barn Layout', () => {
   test(
     'displays all required components (title, inventory, zone diagram, legends, compass, close)',
-    { tag: ['@highlight-barn-layout'] },
     async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
 
@@ -413,7 +392,6 @@ test.describe('Overview - Barn Layout', () => {
 
   test(
     'current inventory matches Overview panel (S+G), zone total, and Barns menu',
-    { tag: ['@highlight-barn-layout'] },
     async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
 
@@ -506,7 +484,6 @@ test.describe('Overview - Barn Layout', () => {
 
   test(
     'zone total (all statuses) equals Admin API total',
-    { tag: ['@highlight-admin-api', '@highlight-barn-layout'] },
     async ({ authenticatedOnOverview, adminApi }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
 
@@ -561,7 +538,6 @@ test.describe('Overview - Barn Layout', () => {
    */
   test(
     'total pigs per status (all zones) equals Admin API counts',
-    { tag: ['@highlight-barn-layout', '@highlight-inventory-reference'] },
     async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     const referenceAdminApi = new MockAdminApiClient();
@@ -619,7 +595,6 @@ test.describe('Overview - Barn Layout', () => {
    */
   test(
     'pigs per status per zone equal Admin API counts',
-    { tag: ['@highlight-barn-layout', '@highlight-inventory-reference'] },
     async ({ authenticatedOnOverview }) => {
     const overviewPage = new OverviewPage(authenticatedOnOverview);
     const referenceAdminApi = new MockAdminApiClient();
@@ -698,9 +673,7 @@ const LOCATION_IDS = [
 test.describe('Overview - Menu navigation', () => {
   test(
     'each menu item (location) navigates to its corresponding location',
-    { tag: ['@highlight-ui'] },
     async ({ authenticatedOnOverview }) => {
-    failDemoIfEnabled('demo-menu-navigation');
     const overviewPage = new OverviewPage(authenticatedOnOverview);
 
     await overviewPage.barnsMenu.waitFor({ state: 'visible', timeout: 15000 });

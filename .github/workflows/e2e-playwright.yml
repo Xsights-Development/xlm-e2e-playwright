@@ -1,0 +1,89 @@
+# Manual E2E only — no run on push, PR, or merge.
+name: E2E Playwright
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Playwright project
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - farm
+          - overview
+      grep:
+        description: Optional --grep (e.g. @contract, @health)
+        required: false
+        default: ''
+
+jobs:
+  e2e:
+    name: Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        env:
+          CI: true
+          APP_URL: ${{ secrets.APP_URL }}
+          APP_USER: ${{ secrets.APP_USER }}
+          APP_PASS: ${{ secrets.APP_PASS }}
+          APP_TENANT_IDENTIFIER: ${{ secrets.APP_TENANT_IDENTIFIER }}
+          APP_FARM_IDENTIFIER: ${{ secrets.APP_FARM_IDENTIFIER }}
+          APP_LOCATION_TYPE: ${{ secrets.APP_LOCATION_TYPE }}
+          APP_LOCATION_IDENTIFIER: ${{ secrets.APP_LOCATION_IDENTIFIER }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          CUBE_API_URL: ${{ secrets.CUBE_API_URL }}
+          ADMIN_URL: ${{ secrets.ADMIN_URL }}
+          ADMIN_USER: ${{ secrets.ADMIN_USER }}
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+          APP_API_FARM_IDENTIFIER: ${{ secrets.APP_API_FARM_IDENTIFIER }}
+          APP_TIMEZONE: ${{ secrets.APP_TIMEZONE }}
+        run: |
+          set -euo pipefail
+          CMD=(npx playwright test)
+          PROJECT="${{ github.event.inputs.project }}"
+          GREP="${{ github.event.inputs.grep }}"
+          if [ "$PROJECT" != "all" ]; then
+            CMD+=(--project="$PROJECT")
+          fi
+          if [ -n "$GREP" ]; then
+            CMD+=(--grep "$GREP")
+          fi
+          echo "Running: ${CMD[*]}"
+          "${CMD[@]}"
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.event.inputs.project }}-${{ github.run_number }}
+          path: |
+            reports/
+            results/
+          retention-days: 14
+
+      - name: Upload JUnit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-${{ github.event.inputs.project }}-${{ github.run_number }}
+          path: reports/junit.xml
+          if-no-files-found: ignore
+          retention-days: 14

@@ -2,7 +2,7 @@
  * Mock Admin API client for E2E tests. Returns values set from UI (no real API calls).
  * Use in Barn Layout tests to assert popup counts without calling Admin API.
  */
-import type { AnimalListStatus } from '@/lib/admin-api.client.js';
+import type { AnimalListStatus } from './admin-api.client.js';
 
 export interface MockAdminApiTotals {
   normal: number;
@@ -59,21 +59,5 @@ export class MockAdminApiClient {
     return (
       this.totalsByStatus.normal + this.totalsByStatus.subOptimal + this.totalsByStatus.poor
     );
-  }
-
-  /**
-   * Stub: total G tags (Normal/Sub-optimal/Poor, last_seen ≤ 48h) from Animal table on Admin.
-   * Returns 1016 for Current Inventory G-tags comparison. Replace with real Admin API when available.
-   */
-  async getCurrentInventoryGCountFromAdmin(): Promise<number> {
-    return 1016;
-  }
-
-  /**
-   * Stub: total S tags (Normal/Sub-optimal/Poor, last_seen ≤ 48h) from Animal table on Admin.
-   * Returns 0 for Current Inventory S-tags comparison (hidden or none on UI). Replace with real Admin API when available.
-   */
-  async getCurrentInventorySCountFromAdmin(): Promise<number> {
-    return 0;
   }
 }

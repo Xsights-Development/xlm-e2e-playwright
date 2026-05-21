@@ -40,7 +40,7 @@ export class LoginPage extends BasePage {
      */
     async navigateToLoginPage(): Promise<void> {
         await this.goto(ROUTES.signIn);
-        await this.waitForPageLoad();
+        await this.page.waitForLoadState('domcontentloaded');
     }
 
     /**
@@ -121,22 +121,29 @@ export class LoginPage extends BasePage {
     }
 
     /**
-     * Select farm from dropdown by identifier (i18n-safe). Skips if not found.
-     * Must click combobox first to open dropdown, then click option [data-farm-identifier].
-     * App renders data-farm-identifier as String(farm.identifier) (may be number from API).
+     * Select farm from React-Select (.farm-select).
+     * Opens menu via .select__input-container, then picks [data-farm-identifier] or exact display text.
      */
     async selectFarm(farmIdentifier: string | number): Promise<void> {
-        try {
-            await this.farmCombobox.waitFor({ state: 'visible', timeout: 10000 });
-            await this.farmCombobox.click();
-            await this.wait(600);
-            const id = String(farmIdentifier);
-            const option = this.page.locator(`[data-farm-identifier="${id}"]`).first();
-            await option.waitFor({ state: 'visible', timeout: 10000 });
-            await option.click();
-        } catch (error) {
-            // Skip if option not found (e.g. identifier mismatch or dropdown closed)
+        const id = String(farmIdentifier).trim();
+        const farmSelect = this.page.locator('.farm-select');
+        await farmSelect.waitFor({ state: 'visible', timeout: 10000 });
+        await farmSelect.locator('.select__input-container').click();
+
+        const byIdentifier = this.page.locator(`[data-farm-identifier="${id}"]`).first();
+        if (await byIdentifier.isVisible({ timeout: 10000 }).catch(() => false)) {
+            await byIdentifier.click();
+        } else if (await this.page.getByText(id, { exact: true }).isVisible({ timeout: 3000 }).catch(() => false)) {
+            await this.page.getByText(id, { exact: true }).click();
+        } else {
+            throw new Error(
+                `Farm option not found for APP_FARM_IDENTIFIER="${id}". ` +
+                    'Use data-farm-identifier value or exact farm display name (e.g. "Groove Farm").',
+            );
         }
+
+        await expect(this.dashboardButton).toBeEnabled({ timeout: 10000 });
+        await this.wait(300);
     }
 
     /**
@@ -189,7 +196,7 @@ export class LoginPage extends BasePage {
         while (Date.now() < deadline) {
             if (this.isOnDashboard()) return;
             if (await this.tenantCombobox.isVisible({ timeout: 1000 }).catch(() => false)) return;
-            if (await this.page.getByTestId("farm-select").isVisible({ timeout: 500 }).catch(() => false)) return;
+            if (await this.page.locator('.farm-select').isVisible({ timeout: 500 }).catch(() => false)) return;
             await this.wait(300);
         }
     }
@@ -216,9 +223,8 @@ export class LoginPage extends BasePage {
         if (this.isOnDashboard()) return;
 
         
-        // Only run farm step when farm selector is actually shown (farm-select). Do not use farmCombobox
-        // here because .or(combobox.first()) can match the tenant combobox still in DOM when 1 farm.
-        const farmStepVisible = await this.page.getByTestId("farm-select").isVisible({ timeout: 3000 }).catch(() => false);
+        // Farm step uses React-Select class .farm-select (testid may not be on the visible node).
+        const farmStepVisible = await this.page.locator('.farm-select').isVisible({ timeout: 10000 }).catch(() => false);
         if (farmStepVisible) {
             await this.selectFarm(farmIdentifier);
             await this.clickDashboard();
