@@ -94,3 +94,56 @@ jobs:
           path: reports/junit.xml
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Notify Slack
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_WEBHOOK_URL not set — skip Slack notification"
+            exit 0
+          fi
+          STATUS="${{ job.status }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          PROJECT="${{ github.event.inputs.project }}"
+          GREP="${{ github.event.inputs.grep }}"
+          if [ "$STATUS" = "success" ]; then
+            COLOR="#36a64f"
+            EMOJI=":white_check_mark:"
+            RESULT="Success"
+          else
+            COLOR="#dc3545"
+            EMOJI=":x:"
+            RESULT="Failure"
+          fi
+          JUNIT_SUMMARY=""
+          if [ -f reports/junit.xml ]; then
+            JUNIT_SUMMARY=$(python3 -c "import xml.etree.ElementTree as ET;r=ET.parse('reports/junit.xml').getroot();t=f=e=0
+for s in r.iter('testsuite'): t+=int(s.attrib.get('tests',0)); f+=int(s.attrib.get('failures',0)); e+=int(s.attrib.get('errors',0))
+d=f+e; print(f'{max(t-d,0)} passed, {d} failed ({t} total)')" 2>/dev/null || true)
+          fi
+          PAYLOAD=$(jq -n \
+            --arg emoji "$EMOJI" \
+            --arg result "$RESULT" \
+            --arg project "$PROJECT" \
+            --arg grep "$GREP" \
+            --arg url "$RUN_URL" \
+            --arg color "$COLOR" \
+            --arg junit "$JUNIT_SUMMARY" \
+            '{
+              text: ($emoji + " E2E Playwright — " + $result),
+              attachments: [{
+                color: $color,
+                fields: [
+                  {title: "Project", value: $project, short: true},
+                  {title: "Grep", value: (if $grep == "" then "(none)" else $grep end), short: true},
+                  {title: "Result", value: $result, short: true},
+                  {title: "Tests", value: (if $junit == "" then "n/a" else $junit end), short: true},
+                  {title: "Run", value: $url, short: false}
+                ]
+              }]
+            }')
+          curl -sS -f -X POST -H 'Content-type: application/json' \
+            --data "$PAYLOAD" "$SLACK_WEBHOOK_URL" \
+            || echo "::warning::Slack notification failed (check SLACK_WEBHOOK_URL)"
