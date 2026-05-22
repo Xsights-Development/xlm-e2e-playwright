@@ -83,19 +83,23 @@ PAYLOAD=$(jq -n \
     attachments: [{
       color: $color,
       mrkdwn_in: ["fields", "text"],
-      fields: [
-        {title: "Result", value: $result, short: true},
-        {title: "Tests", value: $junit, short: true},
-        {title: "Pass rate", value: $bar, short: false},
-        {title: "Duration", value: $duration, short: true},
-        {title: "Project", value: $project, short: true},
-        {title: "Grep", value: $grep, short: true},
-        {title: "Target", value: $host, short: true},
-        {title: "Branch", value: $branch, short: true},
-        {title: "Triggered by", value: $actor, short: true},
-        {title: "Run", value: ("<" + $url + "|Open in GitHub Actions>"), short: false}
-      ]
-      + (if $failed != "" then [{title: "Failed tests", value: ("```" + $failed + "```"), short: false}] else [] end),
+      fields: (
+        [
+          {title: "Result", value: $result, short: true},
+          {title: "Tests", value: $junit, short: true},
+          {title: "Pass rate", value: $bar, short: false},
+          {title: "Duration", value: $duration, short: true},
+          {title: "Project", value: $project, short: true},
+          {title: "Grep", value: $grep, short: true},
+          {title: "Target", value: $host, short: true},
+          {title: "Branch", value: $branch, short: true},
+          {title: "Triggered by", value: $actor, short: true},
+          {title: "Run", value: ("<" + $url + "|Open in GitHub Actions>"), short: false}
+        ]
+        + if ($failed | length) > 0 then
+            [{title: "Failed tests", value: ("```\n" + $failed + "\n```"), short: false}]
+          else [] end
+      ),
       footer: $footer,
       ts: $ts
     }]
