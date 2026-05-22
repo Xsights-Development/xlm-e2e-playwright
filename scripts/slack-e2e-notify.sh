@@ -79,22 +79,22 @@ PAYLOAD=$(jq -n \
   --arg footer "$FOOTER" \
   --argjson ts "$TS" \
   '{
-    text: ($emoji + " E2E Playwright — " + $result),
+    text: ($emoji + "XLM E2E Playwright — " + $result),
     attachments: [{
       color: $color,
       mrkdwn_in: ["fields", "text"],
       fields: (
         [
           {title: "Result", value: $result, short: true},
-          {title: "Tests", value: $junit, short: true},
-          {title: "Pass rate", value: $bar, short: false},
           {title: "Duration", value: $duration, short: true},
-          {title: "Project", value: $project, short: true},
-          {title: "Grep", value: $grep, short: true},
+          {title: "Tests", value: $junit, short: true},
+          {title: "Pass rate", value: $bar, short: true},
           {title: "Target", value: $host, short: true},
+          {title: "Level", value: $project, short: true},
           {title: "Branch", value: $branch, short: true},
           {title: "Triggered by", value: $actor, short: true},
-          {title: "Run", value: ("<" + $url + "|Open in GitHub Actions>"), short: false}
+          {title: "Grep", value: $grep, short: true},
+          {title: "Run", value: ("<" + $url + "|Open in GitHub Actions>"), short: true}
         ]
         + if ($failed | length) > 0 then
             [{title: "Failed tests", value: ("```\n" + $failed + "\n```"), short: false}]
