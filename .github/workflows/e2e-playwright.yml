@@ -18,6 +18,10 @@ on:
         required: false
         default: ''
 
+permissions:
+  id-token: write   # required for AWS OIDC assume-role
+  contents: read
+
 jobs:
   e2e:
     name: Playwright
@@ -26,6 +30,20 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Install Session Manager plugin
+        run: |
+          set -euo pipefail
+          curl -s "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_64bit/session-manager-plugin.deb" \
+            -o /tmp/session-manager-plugin.deb
+          sudo dpkg -i /tmp/session-manager-plugin.deb
+          session-manager-plugin --version
 
       - uses: actions/setup-node@v4
         with:
@@ -57,12 +75,45 @@ jobs:
           APP_PASS: ${{ secrets.APP_PASS }}
           ADMIN_USER: ${{ secrets.ADMIN_USER }}
           ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+          # Staging DB (read-only) — Playwright reads to verify tests
+          # Reached via SSM port-forward → connect over localhost, not the real host.
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          STAGING_EC2_INSTANCE_ID: ${{ secrets.STAGING_EC2_INSTANCE_ID }}
+          STAGING_DB_REMOTE_HOST: ${{ secrets.STAGING_DB_REMOTE_HOST }}   # real RDS endpoint (tunnel target)
+          STAGING_DB_HOST: localhost                                # tests connect through the tunnel
+          STAGING_DB_PORT: '5432'
+          STAGING_DB_SSLMODE: require
+          STAGING_DB_NAME: ${{ secrets.STAGING_DB_NAME }}
+          STAGING_DB_READONLY_USER: ${{ secrets.STAGING_DB_READONLY_USER }}
+          STAGING_DB_READONLY_PASS: ${{ secrets.STAGING_DB_READONLY_PASS }}
         run: |
           set -euo pipefail
           if [ -z "${APP_URL}" ]; then
             echo "::error::APP_URL is empty — add repository variable APP_URL (not secret)"
             exit 1
           fi
+
+          # --- Open SSM port-forward to RDS in THIS shell so it lives for the test run ---
+          aws ssm start-session \
+            --target "$STAGING_EC2_INSTANCE_ID" \
+            --document-name AWS-StartPortForwardingSessionToRemoteHost \
+            --parameters "{\"host\":[\"$STAGING_DB_REMOTE_HOST\"],\"portNumber\":[\"5432\"],\"localPortNumber\":[\"5432\"]}" \
+            > /tmp/ssm-tunnel.log 2>&1 &
+          SSM_PID=$!
+          # always kill the tunnel on exit (success or failure)
+          trap 'kill "$SSM_PID" 2>/dev/null || true' EXIT
+          # wait up to 30s for the local port (bash /dev/tcp — no nc dependency)
+          for i in $(seq 1 30); do
+            if (exec 3<>/dev/tcp/127.0.0.1/5432) 2>/dev/null; then exec 3>&- 3<&-; echo "tunnel up"; break; fi
+            if ! kill -0 "$SSM_PID" 2>/dev/null; then
+              echo "::error::SSM session exited early"; cat /tmp/ssm-tunnel.log; exit 1
+            fi
+            sleep 1
+          done
+          if ! (exec 3<>/dev/tcp/127.0.0.1/5432) 2>/dev/null; then
+            echo "::error::SSM tunnel did not open on localhost:5432"; cat /tmp/ssm-tunnel.log; exit 1
+          fi
+          exec 3>&- 3<&- 2>/dev/null || true
           echo "Using APP_URL host: $(echo "$APP_URL" | sed -E 's|^(https?://[^/]+).*|\1|')"
           CMD=(npx playwright test)
           PROJECT="${{ github.event.inputs.project }}"
