@@ -11,15 +11,7 @@ import {
   toMomentLocale,
 } from '@/lib/i18n/locales.js';
 import moment from 'moment-timezone';
-import 'moment/locale/vi.js';
-import 'moment/locale/th.js';
-import 'moment/locale/zh-cn.js';
-import 'moment/locale/es.js';
-import 'moment/locale/pt.js';
-import 'moment/locale/bg.js';
-import 'moment/locale/ro.js';
-import 'moment/locale/de-ch.js';
-import 'moment/locale/nl-be.js';
+import '@/lib/i18n/moment-locales.js';
 
 const TAGS_TITLE_KEY = 'container.FarmViewPage.titleTagsDeployed';
 const TAGS_INVENTORY_KEY = 'container.FarmViewPage.subTitleInventory';
