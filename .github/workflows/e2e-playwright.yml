@@ -30,6 +30,7 @@ on:
 permissions:
   id-token: write   # required for AWS OIDC assume-role
   contents: read
+  actions: read     # list run artifacts for Slack HTML report link
 
 jobs:
   e2e:
@@ -181,6 +182,29 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Resolve HTML report artifact URL
+        if: always()
+        id: report_artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: playwright-report-${{ github.event.inputs.project }}-${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          FALLBACK="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          URL="$FALLBACK"
+          for _ in 1 2 3 4 5 6 7 8; do
+            ID=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+              --jq ".artifacts[] | select(.name==\"${ARTIFACT_NAME}\") | .id" | head -n1 || true)
+            if [ -n "${ID:-}" ]; then
+              URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${ID}"
+              break
+            fi
+            sleep 2
+          done
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+          echo "name=${ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
+          echo "Report link: ${URL}"
+
       - name: Notify Slack
         if: always()
         env:
@@ -189,6 +213,8 @@ jobs:
           INPUT_PROJECT: ${{ github.event.inputs.project }}
           INPUT_GREP: ${{ github.event.inputs.grep }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPORT_URL: ${{ steps.report_artifact.outputs.url }}
+          ARTIFACT_NAME: ${{ steps.report_artifact.outputs.name }}
           GIT_BRANCH: ${{ github.ref_name }}
           GIT_ACTOR: ${{ github.actor }}
           RUN_NUMBER: ${{ github.run_number }}

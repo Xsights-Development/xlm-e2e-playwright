@@ -17,6 +17,8 @@ RUN_NUM="${RUN_NUMBER:-}"
 REPO="${GIT_REPO:-}"
 WORKFLOW="${WORKFLOW_NAME:-E2E Playwright}"
 APP_HOST="${APP_URL_HOST:-n/a}"
+REPORT_URL="${REPORT_URL:-$RUN_URL}"
+ARTIFACT_NAME="${ARTIFACT_NAME:-playwright-report}"
 if [ -n "$APP_HOST" ] && [ "$APP_HOST" != "n/a" ]; then
   APP_HOST=$(echo "$APP_HOST" | sed -E 's|^(https?://[^/]+).*|\1|')
 fi
@@ -45,19 +47,23 @@ case "$STATUS" in
     ;;
 esac
 
-JUNIT_JSON='{"summary":"n/a","bar":"n/a","duration":"n/a","failed":""}'
+JUNIT_JSON='{"summary":"n/a","bar":"n/a","duration":"n/a","failed":"","cases":""}'
 if [ -f reports/junit.xml ]; then
   JUNIT_JSON=$(python3 scripts/junit-slack-summary.py reports/junit.xml 2>/dev/null || echo "$JUNIT_JSON")
 fi
 JUNIT_SUMMARY=$(echo "$JUNIT_JSON" | jq -r '.summary')
 PASS_RATE_BAR=$(echo "$JUNIT_JSON" | jq -r '.bar')
 DURATION=$(echo "$JUNIT_JSON" | jq -r '.duration')
-FAILED_LIST=$(echo "$JUNIT_JSON" | jq -r '.failed')
+FAILED_LIST=$(echo "$JUNIT_JSON" | jq -r '.failed // empty')
+CASES_LIST=$(echo "$JUNIT_JSON" | jq -r '.cases // empty')
 
 GREP_DISPLAY="${GREP:-(none)}"
 if [ -z "$GREP" ]; then
   GREP_DISPLAY="(none)"
 fi
+
+REPORT_HINT="Download zip → open html/index.html (same as playwright show-report)"
+REPORT_LINK="<${REPORT_URL}|${ARTIFACT_NAME}>"
 
 FOOTER="${REPO} · ${WORKFLOW} · run #${RUN_NUM}"
 TS=$(date -u +%s)
@@ -76,10 +82,13 @@ PAYLOAD=$(jq -n \
   --arg actor "$ACTOR" \
   --arg host "$APP_HOST" \
   --arg failed "$FAILED_LIST" \
+  --arg cases "$CASES_LIST" \
+  --arg report_link "$REPORT_LINK" \
+  --arg report_hint "$REPORT_HINT" \
   --arg footer "$FOOTER" \
   --argjson ts "$TS" \
   '{
-    text: ($emoji + "XLM E2E Playwright — " + $result),
+    text: ($emoji + " XLM E2E Playwright — " + $result),
     attachments: [{
       color: $color,
       mrkdwn_in: ["fields", "text"],
@@ -94,8 +103,12 @@ PAYLOAD=$(jq -n \
           {title: "Branch", value: $branch, short: true},
           {title: "Triggered by", value: $actor, short: true},
           {title: "Grep", value: $grep, short: true},
-          {title: "Run", value: ("<" + $url + "|Open in GitHub Actions>"), short: true}
+          {title: "Run", value: ("<" + $url + "|Open in GitHub Actions>"), short: true},
+          {title: "HTML report", value: ($report_link + "\n_" + $report_hint + "_"), short: false}
         ]
+        + if ($cases | length) > 0 then
+            [{title: "Test cases", value: ("```\n" + $cases + "\n```"), short: false}]
+          else [] end
         + if ($failed | length) > 0 then
             [{title: "Failed tests", value: ("```\n" + $failed + "\n```"), short: false}]
           else [] end

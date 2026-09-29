@@ -66,7 +66,7 @@ If `APP_URL` is missing, the job fails early with a clear error (avoids `localho
 4. Open the run → download **playwright-report-…** artifact if tests fail (HTML under `reports/html`).
 5. If `SLACK_WEBHOOK_URL` is set, a summary is posted to the webhook channel after every run (success or failure). Logic lives in [`scripts/slack-e2e-notify.sh`](../scripts/slack-e2e-notify.sh).
 
-**Slack message includes:** colored sidebar (green / red / amber / grey), pass-rate bar (`████░░`), test counts, duration from JUnit, project/grep, target `APP_URL`, branch, who triggered the run, link to the workflow run, and up to 15 failed test names when applicable.
+**Slack message includes:** colored sidebar (green / red / amber / grey), pass-rate bar (`████░░`), test counts, duration from JUnit, **per-case pass/fail list**, project/grep, target `APP_URL`, branch, who triggered the run, link to the workflow run, **HTML report artifact link** (download zip → open `html/index.html`), and a failed-tests block when applicable.
 
 ### Test Slack webhook (one-off)
 
