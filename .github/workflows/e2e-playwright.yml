@@ -17,11 +17,12 @@ on:
       languages:
         description: Include language suite (i18n). Slack /xlm-test-overview → /overview runs languages only (project=i18n).
         required: true
-        default: off
+        # Quote on/off — unquoted YAML 1.1 treats them as booleans; API then rejects string "on".
+        default: "off"
         type: choice
         options:
-          - off
-          - on
+          - "off"
+          - "on"
       grep:
         description: Optional --grep (e.g. @contract, @health, @i18n)
         required: false
