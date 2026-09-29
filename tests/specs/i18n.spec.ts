@@ -466,4 +466,12 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     );
     await expect(i18n.farmTagsTitle).toHaveText(t(loc, TAGS_TITLE_KEY));
   });
+
+  // Temporary: remove after verifying Slack failure UI.
+  test('TC99: force fail for Slack notify UI check', { tag: '@force-fail' }, async () => {
+    expect(
+      false,
+      'Intentional failure — check Slack shows ❌ case list + Failed tests block'
+    ).toBe(true);
+  });
 });
