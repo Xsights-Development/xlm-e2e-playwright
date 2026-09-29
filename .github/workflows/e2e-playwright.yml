@@ -13,10 +13,19 @@ on:
           - all
           - farm
           - overview
+          - i18n
       grep:
-        description: Optional --grep (e.g. @contract, @health)
+        description: Optional --grep (e.g. @contract, @health, @i18n)
         required: false
         default: ''
+      dashboard_ref:
+        description: xahwm-dashboard ref for locale JSON — must match APP_URL env (dev vs UAT)
+        required: true
+        default: revised-ui-version
+        type: choice
+        options:
+          - revised-ui-version   # locales for online/dev APP_URL
+          - staging              # locales for UAT APP_URL
 
 permissions:
   id-token: write   # required for AWS OIDC assume-role
@@ -29,7 +38,22 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout e2e
+        uses: actions/checkout@v4
+
+      # Locale JSON for i18n specs (lib/i18n/locales.ts → DASHBOARD_ROOT).
+      # Private sibling repo: set secret DASHBOARD_CHECKOUT_TOKEN (PAT with contents:read).
+      - name: Checkout dashboard locales
+        if: github.event.inputs.project == 'all' || github.event.inputs.project == 'i18n'
+        uses: actions/checkout@v4
+        with:
+          repository: Xsights-Development/xahwm-dashboard
+          ref: ${{ github.event.inputs.dashboard_ref }}
+          path: xahwm-dashboard
+          token: ${{ secrets.DASHBOARD_CHECKOUT_TOKEN || github.token }}
+          sparse-checkout: |
+            src/locales/lang
+          sparse-checkout-cone-mode: true
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -59,6 +83,8 @@ jobs:
       - name: Run E2E tests
         env:
           CI: true
+          # Locale JSON root for i18n (sibling checkout path)
+          DASHBOARD_ROOT: ${{ github.workspace }}/xahwm-dashboard
           # Repository variables (Settings → Actions → Variables)
           APP_URL: ${{ vars.APP_URL }}
           APP_TENANT_IDENTIFIER: ${{ vars.APP_TENANT_IDENTIFIER }}
@@ -93,6 +119,17 @@ jobs:
             exit 1
           fi
 
+          PROJECT="${{ github.event.inputs.project }}"
+          GREP="${{ github.event.inputs.grep }}"
+          if [ "$PROJECT" = "all" ] || [ "$PROJECT" = "i18n" ]; then
+            LOCALE_SAMPLE="${DASHBOARD_ROOT}/src/locales/lang/en.json"
+            if [ ! -f "$LOCALE_SAMPLE" ]; then
+              echo "::error::Missing $LOCALE_SAMPLE — checkout dashboard locales failed or dashboard_ref is wrong. For a private dashboard repo, add secret DASHBOARD_CHECKOUT_TOKEN."
+              exit 1
+            fi
+            echo "DASHBOARD_ROOT=$DASHBOARD_ROOT (dashboard_ref=${{ github.event.inputs.dashboard_ref }})"
+          fi
+
           # --- Open SSM port-forward to RDS in THIS shell so it lives for the test run ---
           aws ssm start-session \
             --target "$STAGING_EC2_INSTANCE_ID" \
@@ -116,8 +153,6 @@ jobs:
           exec 3>&- 3<&- 2>/dev/null || true
           echo "Using APP_URL host: $(echo "$APP_URL" | sed -E 's|^(https?://[^/]+).*|\1|')"
           CMD=(npx playwright test)
-          PROJECT="${{ github.event.inputs.project }}"
-          GREP="${{ github.event.inputs.grep }}"
           if [ "$PROJECT" != "all" ]; then
             CMD+=(--project="$PROJECT")
           fi

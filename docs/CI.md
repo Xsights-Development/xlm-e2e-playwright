@@ -46,6 +46,12 @@ The workflow maps **`vars.*`** → URLs/identifiers and **`secrets.*`** → cred
 |-------------|---------|
 | `SLACK_WEBHOOK_URL` | Incoming Webhook URL (`https://hooks.slack.com/services/...`) for channel `#e2e-xlm-reports`. Job posts pass/fail + link when set; skipped if empty. |
 
+### Repository secrets (optional — i18n / dashboard locales)
+
+| Secret name | Purpose |
+|-------------|---------|
+| `DASHBOARD_CHECKOUT_TOKEN` | PAT (or fine-grained token) with **Contents: Read** on `Xsights-Development/xahwm-dashboard`. Required when that repo is private — default `GITHUB_TOKEN` cannot clone sibling private repos. |
+
 Copy values from your working local `.env` (same UAT/staging target). Do **not** commit webhook URLs to git.
 
 If `APP_URL` is missing, the job fails early with a clear error (avoids `localhost:3000` on the runner).
@@ -54,7 +60,9 @@ If `APP_URL` is missing, the job fails early with a clear error (avoids `localho
 
 1. Push `.github/workflows/e2e-playwright.yml` to the default branch (or the branch you select when running).
 2. **Actions** → **E2E Playwright** → **Run workflow**.
-3. Choose **branch**, **project** (`all` | `farm` | `overview`), optional **grep** (e.g. `@contract`).
+3. Choose **branch**, **project** (`all` | `farm` | `overview` | `i18n`), optional **grep**, and for i18n/`all` choose **dashboard_ref**:
+   - `revised-ui-version` → locales for **online/dev** (`APP_URL` trỏ môi trường đó)
+   - `staging` → locales for **UAT** (`APP_URL` trỏ UAT)
 4. Open the run → download **playwright-report-…** artifact if tests fail (HTML under `reports/html`).
 5. If `SLACK_WEBHOOK_URL` is set, a summary is posted to the webhook channel after every run (success or failure). Logic lives in [`scripts/slack-e2e-notify.sh`](../scripts/slack-e2e-notify.sh).
 
@@ -72,14 +80,27 @@ curl -X POST -H 'Content-type: application/json' \
 
 | Input | Meaning |
 |-------|---------|
-| `project` | `all` = both projects; `farm` / `overview` = one spec file |
+| `project` | `all` = farm + overview + i18n; `farm` / `overview` / `i18n` = one Playwright project |
 | `grep` | Passed to Playwright `--grep`; leave empty for full project |
+| `dashboard_ref` | Locale JSON from `xahwm-dashboard`: `revised-ui-version` (dev/online) or `staging` (UAT). Used when `project` is `all` or `i18n`. Must match the build behind `APP_URL`. |
 
 Examples:
 
 - Full farm: `project=farm`, `grep` empty  
 - Contract only: `project=all`, `grep=@contract`  
-- Health: `project=farm`, `grep=@health`
+- Health: `project=farm`, `grep=@health`  
+- i18n vs online/dev: `project=i18n`, `dashboard_ref=revised-ui-version` (and `APP_URL` = dev)  
+- i18n vs UAT: `project=i18n`, `dashboard_ref=staging` (and `APP_URL` = UAT)
+
+```bash
+# Dev / online
+gh workflow run e2e-playwright.yml --ref <e2e-branch> \
+  -f project=i18n -f dashboard_ref=revised-ui-version
+
+# UAT
+gh workflow run e2e-playwright.yml --ref <e2e-branch> \
+  -f project=i18n -f dashboard_ref=staging
+```
 
 ## 4. Local parity
 
@@ -91,6 +112,8 @@ cp .env.example .env
 npm ci && npm run browsers && npm run test
 ```
 
+For i18n locally, keep `xahwm-dashboard` as a sibling of this repo, or set `DASHBOARD_ROOT`.
+
 ## 5. Troubleshooting
 
 | Issue | Check |
@@ -99,6 +122,8 @@ npm ci && npm run browsers && npm run test
 | Login / tenant failures | `vars` + `secrets` match UAT; app reachable from GitHub runners |
 | Cube / contract failures | `API_BASE_URL`, `CUBE_API_URL`, optional `APP_API_FARM_IDENTIFIER` |
 | Admin / business failures | `ADMIN_*` secrets; Admin API allows CI runner IPs if restricted |
+| Missing `en.json` / locale checkout | `dashboard_ref` exists; add `DASHBOARD_CHECKOUT_TOKEN` if dashboard is private |
+| i18n text mismatches | `dashboard_ref` must match the dashboard build deployed at `APP_URL` |
 | Empty report artifact | Job cancelled before tests finished; inspect job logs |
 | No Slack message | Add secret `SLACK_WEBHOOK_URL`; check **Notify Slack** step log (curl errors) |
 
