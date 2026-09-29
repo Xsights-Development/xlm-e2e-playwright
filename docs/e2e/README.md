@@ -16,6 +16,8 @@ Playwright QC handoff (Admin oracles, tags): **[`PLAYWRIGHT-HANDOFF.md`](./PLAYW
 
 Working docs for this Playwright repo are under **`docs/e2e/`**. Refresh from xahwm-dashboard when hooks or Cube queries change upstream.
 
+**i18n language switch:** [`i18n.md`](./i18n.md) (TC01–TC12).
+
 ---
 
 ## Screen index

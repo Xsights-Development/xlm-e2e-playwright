@@ -19,10 +19,12 @@ Tag patterns for grep: [configs/test-tags.ts](../configs/test-tags.ts).
 |---------|--------|---------|
 | `farm` | `farm.spec.ts` | 1 (shared dashboard session) |
 | `overview` | `overview.spec.ts` | 1 |
+| `i18n` | `i18n.spec.ts` | 1 (shared dashboard session, serial) |
 
 ```bash
 npx playwright test --project=farm
 npx playwright test --project=overview
+npx playwright test --project=i18n
 npx playwright test --project=farm --headed
 ```
 
@@ -56,6 +58,17 @@ npx playwright test --project=overview
 npx playwright test --project=overview --grep "Tags Deployed"
 npx playwright test --project=overview --grep @contract
 ```
+
+## i18n
+
+See [e2e/i18n.md](./e2e/i18n.md) for the full TC01–TC12 table.
+
+```bash
+npx playwright test --project=i18n
+npx playwright test --project=i18n --grep @i18n
+```
+
+Optional: `DASHBOARD_ROOT` if `xahwm-dashboard` is not a sibling of this repo.
 
 ## Probes (no browser)
 

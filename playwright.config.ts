@@ -43,13 +43,21 @@ export default defineConfig({
       name: 'farm',
       testMatch: /farm\.spec\.ts$/,
       workers: 1,
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1200 } },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
     {
       name: 'overview',
       testMatch: /overview\.spec\.ts$/,
       workers: 1,
-      use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1200 } },
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: 'i18n',
+      testMatch: /i18n\.spec\.ts$/,
+      workers: 1,
+      // MacBook Pro 16" M1 (~1792×1120 scaled): leave room for menu bar, dock, browser chrome.
+      // Keep width ≥1024 so HorizontalNav (lg) still shows in room view.
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
   ],
 });
