@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       project:
-        description: Playwright project
+        description: Playwright project (farm / overview / all). Languages is a separate toggle.
         required: true
         default: all
         type: choice
@@ -14,18 +14,27 @@ on:
           - farm
           - overview
           - i18n
+      languages:
+        description: Include language suite (i18n). Slack /xlm-test-overview → /overview runs languages only (project=i18n).
+        required: true
+        default: off
+        type: choice
+        options:
+          - off
+          - on
       grep:
         description: Optional --grep (e.g. @contract, @health, @i18n)
         required: false
         default: ''
       dashboard_ref:
-        description: xahwm-dashboard ref for locale JSON — must match APP_URL env (dev vs UAT)
+        description: Locale JSON ref — auto maps from APP_URL (dev→revised-ui-version, demo→staging)
         required: true
-        default: revised-ui-version
+        default: auto
         type: choice
         options:
-          - revised-ui-version   # locales for online/dev APP_URL
-          - staging              # locales for UAT APP_URL
+          - auto                 # from vars.APP_URL host
+          - revised-ui-version   # force (dev/online)
+          - staging              # force (demo/UAT)
 
 permissions:
   id-token: write   # required for AWS OIDC assume-role
@@ -42,14 +51,50 @@ jobs:
       - name: Checkout e2e
         uses: actions/checkout@v4
 
+      - name: Resolve dashboard_ref from APP_URL
+        id: dashboard_ref
+        if: >-
+          github.event.inputs.languages == 'on' ||
+          github.event.inputs.project == 'i18n'
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          INPUT_REF: ${{ github.event.inputs.dashboard_ref }}
+        run: |
+          set -euo pipefail
+          host=$(echo "${APP_URL:-}" | sed -E 's|^https?://([^/]+).*|\1|' | tr '[:upper:]' '[:lower:]')
+
+          map_from_app_url() {
+            # Host is or contains these domains (e.g. https://dev.xsightslm.com).
+            case "$host" in
+              *dev.xsightslm.com*) echo "revised-ui-version" ;;
+              *demo.xsightslm.com*) echo "staging" ;;
+              *) echo "" ;;
+            esac
+          }
+
+          if [ "${INPUT_REF}" = "auto" ]; then
+            REF="$(map_from_app_url)"
+            if [ -z "$REF" ]; then
+              REF="revised-ui-version"
+              echo "::warning::APP_URL host '${host}' did not match dev/demo.xsightslm.com — fallback dashboard_ref=${REF}"
+            fi
+          else
+            REF="${INPUT_REF}"
+          fi
+
+          echo "ref=${REF}" >> "$GITHUB_OUTPUT"
+          echo "Resolved dashboard_ref=${REF} (input=${INPUT_REF}, APP_URL host=${host})"
+
       # Locale JSON for i18n specs (lib/i18n/locales.ts → DASHBOARD_ROOT).
       # Private sibling repo: set secret DASHBOARD_CHECKOUT_TOKEN (PAT with contents:read).
       - name: Checkout dashboard locales
-        if: github.event.inputs.project == 'all' || github.event.inputs.project == 'i18n'
+        if: >-
+          github.event.inputs.languages == 'on' ||
+          github.event.inputs.project == 'i18n'
         uses: actions/checkout@v4
         with:
           repository: Xsights-Development/xahwm-dashboard
-          ref: ${{ github.event.inputs.dashboard_ref }}
+          ref: ${{ steps.dashboard_ref.outputs.ref }}
           path: xahwm-dashboard
           token: ${{ secrets.DASHBOARD_CHECKOUT_TOKEN || github.token }}
           sparse-checkout: |
@@ -121,14 +166,21 @@ jobs:
           fi
 
           PROJECT="${{ github.event.inputs.project }}"
+          LANGUAGES="${{ github.event.inputs.languages }}"
           GREP="${{ github.event.inputs.grep }}"
-          if [ "$PROJECT" = "all" ] || [ "$PROJECT" = "i18n" ]; then
+
+          RUN_I18N=false
+          if [ "$LANGUAGES" = "on" ] || [ "$PROJECT" = "i18n" ]; then
+            RUN_I18N=true
+          fi
+
+          if [ "$RUN_I18N" = "true" ]; then
             LOCALE_SAMPLE="${DASHBOARD_ROOT}/src/locales/lang/en.json"
             if [ ! -f "$LOCALE_SAMPLE" ]; then
               echo "::error::Missing $LOCALE_SAMPLE — checkout dashboard locales failed or dashboard_ref is wrong. For a private dashboard repo, add secret DASHBOARD_CHECKOUT_TOKEN."
               exit 1
             fi
-            echo "DASHBOARD_ROOT=$DASHBOARD_ROOT (dashboard_ref=${{ github.event.inputs.dashboard_ref }})"
+            echo "DASHBOARD_ROOT=$DASHBOARD_ROOT (dashboard_ref=${{ steps.dashboard_ref.outputs.ref }})"
           fi
 
           # --- Open SSM port-forward to RDS in THIS shell so it lives for the test run ---
@@ -154,13 +206,26 @@ jobs:
           exec 3>&- 3<&- 2>/dev/null || true
           echo "Using APP_URL host: $(echo "$APP_URL" | sed -E 's|^(https?://[^/]+).*|\1|')"
           CMD=(npx playwright test)
-          if [ "$PROJECT" != "all" ]; then
+
+          # Select Playwright projects: base suite + optional languages (i18n).
+          if [ "$PROJECT" = "i18n" ]; then
+            CMD+=(--project=i18n)
+          elif [ "$PROJECT" = "all" ]; then
+            CMD+=(--project=farm --project=overview)
+            if [ "$LANGUAGES" = "on" ]; then
+              CMD+=(--project=i18n)
+            fi
+          else
             CMD+=(--project="$PROJECT")
+            if [ "$LANGUAGES" = "on" ]; then
+              CMD+=(--project=i18n)
+            fi
           fi
+
           if [ -n "$GREP" ]; then
             CMD+=(--grep "$GREP")
           fi
-          echo "Running: ${CMD[*]}"
+          echo "Running: ${CMD[*]} (languages=${LANGUAGES})"
           "${CMD[@]}"
 
       - name: Upload Playwright report

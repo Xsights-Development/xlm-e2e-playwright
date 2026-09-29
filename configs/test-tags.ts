@@ -15,6 +15,4 @@ export const FARM_GREP = {
 /** Locale switch suite (i18n.spec.ts) */
 export const I18N_GREP = {
   all: '@i18n',
-  /** Temporary intentional fail — remove after Slack UI check */
-  forceFail: '@force-fail',
 } as const;
