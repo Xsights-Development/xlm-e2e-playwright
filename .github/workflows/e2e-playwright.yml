@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       project:
-        description: Playwright project
+        description: Playwright project (farm / overview / all). Languages is a separate toggle.
         required: true
         default: all
         type: choice
@@ -13,14 +13,33 @@ on:
           - all
           - farm
           - overview
+          - i18n
+      languages:
+        description: Include language suite (i18n). Slack /xlm-test-overview → /overview runs languages only (project=i18n).
+        required: true
+        default: off
+        type: choice
+        options:
+          - off
+          - on
       grep:
-        description: Optional --grep (e.g. @contract, @health)
+        description: Optional --grep (e.g. @contract, @health, @i18n)
         required: false
         default: ''
+      dashboard_ref:
+        description: Locale JSON ref — auto maps from APP_URL (dev→revised-ui-version, demo→staging)
+        required: true
+        default: auto
+        type: choice
+        options:
+          - auto                 # from vars.APP_URL host
+          - revised-ui-version   # force (dev/online)
+          - staging              # force (demo/UAT)
 
 permissions:
   id-token: write   # required for AWS OIDC assume-role
   contents: read
+  actions: read     # list run artifacts for Slack HTML report link
 
 jobs:
   e2e:
@@ -29,7 +48,58 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout e2e
+        uses: actions/checkout@v4
+
+      - name: Resolve dashboard_ref from APP_URL
+        id: dashboard_ref
+        if: >-
+          github.event.inputs.languages == 'on' ||
+          github.event.inputs.project == 'i18n'
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          INPUT_REF: ${{ github.event.inputs.dashboard_ref }}
+        run: |
+          set -euo pipefail
+          host=$(echo "${APP_URL:-}" | sed -E 's|^https?://([^/]+).*|\1|' | tr '[:upper:]' '[:lower:]')
+
+          map_from_app_url() {
+            # Host is or contains these domains (e.g. https://dev.xsightslm.com).
+            case "$host" in
+              *dev.xsightslm.com*) echo "revised-ui-version" ;;
+              *demo.xsightslm.com*) echo "staging" ;;
+              *) echo "" ;;
+            esac
+          }
+
+          if [ "${INPUT_REF}" = "auto" ]; then
+            REF="$(map_from_app_url)"
+            if [ -z "$REF" ]; then
+              REF="revised-ui-version"
+              echo "::warning::APP_URL host '${host}' did not match dev/demo.xsightslm.com — fallback dashboard_ref=${REF}"
+            fi
+          else
+            REF="${INPUT_REF}"
+          fi
+
+          echo "ref=${REF}" >> "$GITHUB_OUTPUT"
+          echo "Resolved dashboard_ref=${REF} (input=${INPUT_REF}, APP_URL host=${host})"
+
+      # Locale JSON for i18n specs (lib/i18n/locales.ts → DASHBOARD_ROOT).
+      # Private sibling repo: set secret DASHBOARD_CHECKOUT_TOKEN (PAT with contents:read).
+      - name: Checkout dashboard locales
+        if: >-
+          github.event.inputs.languages == 'on' ||
+          github.event.inputs.project == 'i18n'
+        uses: actions/checkout@v4
+        with:
+          repository: Xsights-Development/xahwm-dashboard
+          ref: ${{ steps.dashboard_ref.outputs.ref }}
+          path: xahwm-dashboard
+          token: ${{ secrets.DASHBOARD_CHECKOUT_TOKEN || github.token }}
+          sparse-checkout: |
+            src/locales/lang
+          sparse-checkout-cone-mode: true
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -59,6 +129,8 @@ jobs:
       - name: Run E2E tests
         env:
           CI: true
+          # Locale JSON root for i18n (sibling checkout path)
+          DASHBOARD_ROOT: ${{ github.workspace }}/xahwm-dashboard
           # Repository variables (Settings → Actions → Variables)
           APP_URL: ${{ vars.APP_URL }}
           APP_TENANT_IDENTIFIER: ${{ vars.APP_TENANT_IDENTIFIER }}
@@ -93,6 +165,24 @@ jobs:
             exit 1
           fi
 
+          PROJECT="${{ github.event.inputs.project }}"
+          LANGUAGES="${{ github.event.inputs.languages }}"
+          GREP="${{ github.event.inputs.grep }}"
+
+          RUN_I18N=false
+          if [ "$LANGUAGES" = "on" ] || [ "$PROJECT" = "i18n" ]; then
+            RUN_I18N=true
+          fi
+
+          if [ "$RUN_I18N" = "true" ]; then
+            LOCALE_SAMPLE="${DASHBOARD_ROOT}/src/locales/lang/en.json"
+            if [ ! -f "$LOCALE_SAMPLE" ]; then
+              echo "::error::Missing $LOCALE_SAMPLE — checkout dashboard locales failed or dashboard_ref is wrong. For a private dashboard repo, add secret DASHBOARD_CHECKOUT_TOKEN."
+              exit 1
+            fi
+            echo "DASHBOARD_ROOT=$DASHBOARD_ROOT (dashboard_ref=${{ steps.dashboard_ref.outputs.ref }})"
+          fi
+
           # --- Open SSM port-forward to RDS in THIS shell so it lives for the test run ---
           aws ssm start-session \
             --target "$STAGING_EC2_INSTANCE_ID" \
@@ -116,15 +206,26 @@ jobs:
           exec 3>&- 3<&- 2>/dev/null || true
           echo "Using APP_URL host: $(echo "$APP_URL" | sed -E 's|^(https?://[^/]+).*|\1|')"
           CMD=(npx playwright test)
-          PROJECT="${{ github.event.inputs.project }}"
-          GREP="${{ github.event.inputs.grep }}"
-          if [ "$PROJECT" != "all" ]; then
+
+          # Select Playwright projects: base suite + optional languages (i18n).
+          if [ "$PROJECT" = "i18n" ]; then
+            CMD+=(--project=i18n)
+          elif [ "$PROJECT" = "all" ]; then
+            CMD+=(--project=farm --project=overview)
+            if [ "$LANGUAGES" = "on" ]; then
+              CMD+=(--project=i18n)
+            fi
+          else
             CMD+=(--project="$PROJECT")
+            if [ "$LANGUAGES" = "on" ]; then
+              CMD+=(--project=i18n)
+            fi
           fi
+
           if [ -n "$GREP" ]; then
             CMD+=(--grep "$GREP")
           fi
-          echo "Running: ${CMD[*]}"
+          echo "Running: ${CMD[*]} (languages=${LANGUAGES})"
           "${CMD[@]}"
 
       - name: Upload Playwright report
@@ -146,6 +247,29 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+      - name: Resolve HTML report artifact URL
+        if: always()
+        id: report_artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: playwright-report-${{ github.event.inputs.project }}-${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          FALLBACK="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          URL="$FALLBACK"
+          for _ in 1 2 3 4 5 6 7 8; do
+            ID=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+              --jq ".artifacts[] | select(.name==\"${ARTIFACT_NAME}\") | .id" | head -n1 || true)
+            if [ -n "${ID:-}" ]; then
+              URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${ID}"
+              break
+            fi
+            sleep 2
+          done
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+          echo "name=${ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
+          echo "Report link: ${URL}"
+
       - name: Notify Slack
         if: always()
         env:
@@ -154,6 +278,8 @@ jobs:
           INPUT_PROJECT: ${{ github.event.inputs.project }}
           INPUT_GREP: ${{ github.event.inputs.grep }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPORT_URL: ${{ steps.report_artifact.outputs.url }}
+          ARTIFACT_NAME: ${{ steps.report_artifact.outputs.name }}
           GIT_BRANCH: ${{ github.ref_name }}
           GIT_ACTOR: ${{ github.actor }}
           RUN_NUMBER: ${{ github.run_number }}

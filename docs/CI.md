@@ -46,6 +46,12 @@ The workflow maps **`vars.*`** → URLs/identifiers and **`secrets.*`** → cred
 |-------------|---------|
 | `SLACK_WEBHOOK_URL` | Incoming Webhook URL (`https://hooks.slack.com/services/...`) for channel `#e2e-xlm-reports`. Job posts pass/fail + link when set; skipped if empty. |
 
+### Repository secrets (optional — i18n / dashboard locales)
+
+| Secret name | Purpose |
+|-------------|---------|
+| `DASHBOARD_CHECKOUT_TOKEN` | PAT (or fine-grained token) with **Contents: Read** on `Xsights-Development/xahwm-dashboard`. Required when that repo is private — default `GITHUB_TOKEN` cannot clone sibling private repos. |
+
 Copy values from your working local `.env` (same UAT/staging target). Do **not** commit webhook URLs to git.
 
 If `APP_URL` is missing, the job fails early with a clear error (avoids `localhost:3000` on the runner).
@@ -54,11 +60,19 @@ If `APP_URL` is missing, the job fails early with a clear error (avoids `localho
 
 1. Push `.github/workflows/e2e-playwright.yml` to the default branch (or the branch you select when running).
 2. **Actions** → **E2E Playwright** → **Run workflow**.
-3. Choose **branch**, **project** (`all` | `farm` | `overview`), optional **grep** (e.g. `@contract`).
+3. Choose **branch**, **project** (`all` | `farm` | `overview` | `i18n`), optional **grep**, and **languages** `on`/`off`.
+   - Slack (URLs cố định, không sửa được App):
+     | Slash | Worker path | Chạy |
+     |-------|-------------|------|
+     | `/xlm-test` | `/all` | farm + overview panels |
+     | `/xlm-test-farm` | `/farm` | farm |
+     | `/xlm-test-overview` | `/overview` | **shared** — languages (`project=i18n`) |
+   - Path `/overview` **không** còn map sang Playwright `overview`; suite overview panel vẫn nằm trong `/all`.
+   - `dashboard_ref=auto` maps from `APP_URL` when languages run.
 4. Open the run → download **playwright-report-…** artifact if tests fail (HTML under `reports/html`).
 5. If `SLACK_WEBHOOK_URL` is set, a summary is posted to the webhook channel after every run (success or failure). Logic lives in [`scripts/slack-e2e-notify.sh`](../scripts/slack-e2e-notify.sh).
 
-**Slack message includes:** colored sidebar (green / red / amber / grey), pass-rate bar (`████░░`), test counts, duration from JUnit, project/grep, target `APP_URL`, branch, who triggered the run, link to the workflow run, and up to 15 failed test names when applicable.
+**Slack message includes:** colored sidebar (green / red / amber / grey), pass-rate bar (`████░░`), test counts, duration from JUnit, **per-case pass/fail list**, project/grep, target `APP_URL`, branch, who triggered the run, link to the workflow run, **HTML report artifact link** (download zip → open `html/index.html`), and a failed-tests block when applicable.
 
 ### Test Slack webhook (one-off)
 
@@ -72,14 +86,29 @@ curl -X POST -H 'Content-type: application/json' \
 
 | Input | Meaning |
 |-------|---------|
-| `project` | `all` = both projects; `farm` / `overview` = one spec file |
+| `project` | `farm` / `overview` / `all` (farm+overview panels); `i18n` = languages only |
+| `languages` | `on` / `off` — also add i18n when running farm/overview/all. Slack `/xlm-test-overview` uses `project=i18n` directly. |
 | `grep` | Passed to Playwright `--grep`; leave empty for full project |
+| `dashboard_ref` | `auto` (default) when languages run: map from `APP_URL`, else fallback `revised-ui-version` |
 
 Examples:
 
-- Full farm: `project=farm`, `grep` empty  
-- Contract only: `project=all`, `grep=@contract`  
-- Health: `project=farm`, `grep=@health`
+- Full farm: `project=farm`, `languages=off`  
+- All core (farm + overview panels): `project=all`, `languages=off`  
+- Languages only: `project=i18n` (Actions) or Slack `/xlm-test-overview`
+
+```bash
+gh workflow run e2e-playwright.yml --ref <e2e-branch> \
+  -f project=i18n -f languages=on -f dashboard_ref=auto
+```
+
+Worker (fixed URLs):
+
+```bash
+curl -u 'HOOK_SECRET:' -X POST 'https://xlm-e2e.groove-app-tester.workers.dev/all'       # farm + overview
+curl -u 'HOOK_SECRET:' -X POST 'https://xlm-e2e.groove-app-tester.workers.dev/farm'      # farm
+curl -u 'HOOK_SECRET:' -X POST 'https://xlm-e2e.groove-app-tester.workers.dev/overview'  # languages (shared)
+```
 
 ## 4. Local parity
 
@@ -91,6 +120,8 @@ cp .env.example .env
 npm ci && npm run browsers && npm run test
 ```
 
+For i18n locally, keep `xahwm-dashboard` as a sibling of this repo, or set `DASHBOARD_ROOT`.
+
 ## 5. Troubleshooting
 
 | Issue | Check |
@@ -99,6 +130,8 @@ npm ci && npm run browsers && npm run test
 | Login / tenant failures | `vars` + `secrets` match UAT; app reachable from GitHub runners |
 | Cube / contract failures | `API_BASE_URL`, `CUBE_API_URL`, optional `APP_API_FARM_IDENTIFIER` |
 | Admin / business failures | `ADMIN_*` secrets; Admin API allows CI runner IPs if restricted |
+| Missing `en.json` / locale checkout | `dashboard_ref` exists; add `DASHBOARD_CHECKOUT_TOKEN` if dashboard is private |
+| i18n text mismatches | `dashboard_ref` must match the dashboard build deployed at `APP_URL` |
 | Empty report artifact | Job cancelled before tests finished; inspect job logs |
 | No Slack message | Add secret `SLACK_WEBHOOK_URL`; check **Notify Slack** step log (curl errors) |
 

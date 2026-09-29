@@ -11,3 +11,8 @@ export const FARM_GREP = {
   tagsDeployed: '@tags-deployed',
   inventory: '@inventory',
 } as const;
+
+/** Locale switch suite (i18n.spec.ts) */
+export const I18N_GREP = {
+  all: '@i18n',
+} as const;
