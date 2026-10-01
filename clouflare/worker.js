@@ -71,11 +71,16 @@ function resolveDispatch(pathKey) {
 }
 
 function dispatchWorkflow(env, { project, languages }) {
+    const slackNotify = String(env.XLM_SLACK_NOTIFY || "on")
+        .trim()
+        .toLowerCase();
     const inputs = {
         project,
         grep: "",
         languages,
         dashboard_ref: "auto",
+        // Workflow input name; maps to XLM_SLACK_NOTIFY in the Notify Slack step.
+        xlm_slack_notify: slackNotify === "off" ? "off" : "on",
     };
     return fetch(GITHUB_DISPATCH_URL, {
         method: "POST",

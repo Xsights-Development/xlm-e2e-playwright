@@ -16,4 +16,12 @@ They do **not** run locally with `npm test` / Playwright and do **not** affect p
 - Receive Slack slash command webhooks
 - Dispatch the `e2e-playwright.yml` workflow via GitHub API
 
+## Cloudflare Worker secrets / vars
+
+| Name | Role |
+|------|------|
+| `GH_PAT` | GitHub token for `workflow_dispatch` |
+| `HOOK_SECRET` | Auth for slash / curl trigger |
+| `XLM_SLACK_NOTIFY` | Optional. `on` (default) or `off` — passed as workflow input `xlm_slack_notify` so result notifications can be disabled without removing `SLACK_WEBHOOK_URL` |
+
 Update Cloudflare with `worker.js` when the trigger logic changes. Keep `worker.origin.js` unchanged unless you intentionally refresh the baseline backup.

@@ -4,26 +4,12 @@ import { FarmPage } from '@/pages/farm.page.js';
 import { OverviewPage } from '@/pages/overview.page.js';
 import { I18nPage } from '@/pages/i18n.page.js';
 import { ROUTES } from '@/configs/routes.js';
-import {
-  loadLocaleFlat,
-  t,
-  tInterp,
-  toMomentLocale,
-} from '@/lib/i18n/locales.js';
+import { loadLocaleFlat, t, toMomentLocale } from '@/lib/i18n/locales.js';
 import moment from 'moment-timezone';
 import '@/lib/i18n/moment-locales.js';
 
-const TAGS_TITLE_KEY = 'container.FarmViewPage.titleTagsDeployed';
-const TAGS_INVENTORY_KEY = 'container.FarmViewPage.subTitleInventory';
 const THIS_WEEK_KEY = 'container.FarmViewPage.txtThisWeek';
 const WEEK_KEY = 'container.FarmViewPage.txtWeek';
-const NAV_OVERVIEW_KEY = 'nav.overview';
-const NAV_ANIMAL_KEY = 'nav.animalManagement';
-const SIGN_IN_KEY = 'container.PageSignIn.btnSignIn';
-const ROOM_TAGS_TITLE_KEY = 'container.RoomViewPage.titleTagsDeployed';
-const BARN_DETAILS_KEY = 'container.RoomViewPage.titlBarnDetails';
-const TOTAL_MULTI_KEY = 'global.txtTotalMultipleItems';
-const TOTAL_SINGLE_KEY = 'global.txtTotalSingleItem';
 
 const testUser = process.env.APP_USER ?? 'user@example.com';
 const testPass = process.env.APP_PASS ?? 'password123';
@@ -51,15 +37,13 @@ function pickNonEnLocale(locales: string[]): string {
 test.describe('i18n', { tag: '@i18n' }, () => {
   // One browser login for the whole suite (worker fixture). Serial order.
   // Logout TCs (TC04, TC07) run last so earlier cases stay on one session without re-auth.
+  // Static checks live in i18n-static.spec.ts and run first (alphabetical + workers:1).
   test.describe.configure({ mode: 'serial' });
   test.setTimeout(120_000);
 
-  // --- Easy ---
-
-  test('TC01: switching language updates farm labels from locale JSON', async ({
+  test('TC01: switching language updates marked farm labels from locale JSON', async ({
     authenticatedDashboardSession,
   }) => {
-    // For every language in the menu, UI strings match that locale's JSON.
     const farmPage = new FarmPage(authenticatedDashboardSession);
     const i18n = new I18nPage(authenticatedDashboardSession);
 
@@ -73,14 +57,10 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     for (const locale of locales) {
       const loc = loadLocaleFlat(locale);
       await i18n.selectLanguage(locale);
-      await expect(
-        i18n.farmTagsTitle,
-        `farm-tags-title for locale=${locale}`
-      ).toHaveText(t(loc, TAGS_TITLE_KEY));
-
-      if (await i18n.farmTagsInventory.isVisible().catch(() => false)) {
-        await expect(i18n.farmTagsInventory).toHaveText(t(loc, TAGS_INVENTORY_KEY));
-      }
+      await i18n.assertAllMarkedI18n(loc, {
+        minCount: 1,
+        label: `farm dashboard locale=${locale}`,
+      });
     }
 
     await i18n.selectLanguage('en');
@@ -89,7 +69,6 @@ test.describe('i18n', { tag: '@i18n' }, () => {
   test('TC02: reload keeps selected language', async ({
     authenticatedDashboardSession,
   }) => {
-    // After switch, F5/reload still shows same locale and matching labels.
     const farmPage = new FarmPage(authenticatedDashboardSession);
     const i18n = new I18nPage(authenticatedDashboardSession);
 
@@ -99,14 +78,14 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     const loc = loadLocaleFlat(locale);
 
     await i18n.selectLanguage(locale);
-    await expect(i18n.farmTagsTitle).toHaveText(t(loc, TAGS_TITLE_KEY));
+    await i18n.assertAllMarkedI18n(loc, { label: `before reload locale=${locale}` });
 
     await authenticatedDashboardSession.reload({ waitUntil: 'domcontentloaded' });
     await farmPage.verifyOnDashboard();
     await expect(i18n.languageSelectorValue).toHaveText(
       new RegExp(locale.replace(/-/g, '[-\\s]?'), 'i')
     );
-    await expect(i18n.farmTagsTitle).toHaveText(t(loc, TAGS_TITLE_KEY));
+    await i18n.assertAllMarkedI18n(loc, { label: `after reload locale=${locale}` });
 
     await i18n.selectLanguage('en');
   });
@@ -114,7 +93,6 @@ test.describe('i18n', { tag: '@i18n' }, () => {
   test('TC03: side nav labels follow selected language', async ({
     authenticatedDashboardSession,
   }) => {
-    // Simple layout: Overview / Animal Management sit in header HorizontalNav (room view only).
     const farmPage = new FarmPage(authenticatedDashboardSession);
     const i18n = new I18nPage(authenticatedDashboardSession);
     const overview = new OverviewPage(authenticatedDashboardSession);
@@ -132,24 +110,20 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     );
 
     await i18n.selectLanguage(locale);
-    await expect(i18n.navItem('overview')).toContainText(t(loc, NAV_OVERVIEW_KEY));
-    await expect(i18n.navItem('animalManagement')).toContainText(
-      t(loc, NAV_ANIMAL_KEY)
-    );
+    await i18n.assertAllMarkedI18n(loc, {
+      label: `room view nav locale=${locale}`,
+    });
 
     await i18n.selectLanguage('en');
-    await expect(i18n.navItem('overview')).toContainText(t(en, NAV_OVERVIEW_KEY));
+    await i18n.assertAllMarkedI18n(en, { label: 'room view nav locale=en' });
 
     await authenticatedDashboardSession.goto(ROUTES.dashboard);
     await farmPage.verifyOnDashboard();
   });
 
-  // --- Medium (no logout) ---
-
   test('TC05: overview page labels follow selected language', async ({
     authenticatedDashboardSession,
   }) => {
-    // Open /overview; room tags title matches RoomViewPage JSON.
     const farmPage = new FarmPage(authenticatedDashboardSession);
     const i18n = new I18nPage(authenticatedDashboardSession);
     const overview = new OverviewPage(authenticatedDashboardSession);
@@ -168,18 +142,18 @@ test.describe('i18n', { tag: '@i18n' }, () => {
 
     const roomTagsTitle = authenticatedDashboardSession.getByTestId('room-tags-title');
     await expect(roomTagsTitle).toBeVisible({ timeout: 20_000 });
-    await expect(roomTagsTitle).toHaveText(t(loc, ROOM_TAGS_TITLE_KEY));
+    await i18n.assertAllMarkedI18n(loc, {
+      label: `overview/room locale=${locale}`,
+    });
 
     await authenticatedDashboardSession.goto(ROUTES.dashboard);
     await farmPage.verifyOnDashboard();
     await i18n.selectLanguage('en');
   });
 
-  test('TC06: pagination total uses interpolated translation', async ({
+  test('TC06: pagination total matches interpolated translation pattern', async ({
     authenticatedDashboardSession,
   }) => {
-    // pagination-total matches txtTotalMultipleItems / txtTotalSingleItem with {{total}}
-    // (including "Total 0 item" when the list is empty).
     const page = authenticatedDashboardSession;
     const farmPage = new FarmPage(page);
     const i18n = new I18nPage(page);
@@ -196,7 +170,6 @@ test.describe('i18n', { tag: '@i18n' }, () => {
       testLocationIdentifier
     );
 
-    // Prefer header nav (room view) so location context stays mounted.
     const animalNav = i18n.navItem('animalManagement');
     if (await animalNav.isVisible().catch(() => false)) {
       await animalNav.click();
@@ -205,7 +178,6 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     }
     await page.waitForURL(new RegExp(ROUTES.animalManagement));
 
-    // Barn title proves Animal Management content (and currentLocation) is mounted.
     const barnTitle = page.getByTestId('animal-mgt-barn-details-title');
     await expect(barnTitle).toBeVisible({ timeout: 30_000 });
 
@@ -218,24 +190,18 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     ).toBeVisible({ timeout: 30_000 });
     await totalEl.scrollIntoViewIfNeeded();
 
-    const text = (await totalEl.innerText()).trim();
-    const numMatch = text.match(/(\d+)/);
-    expect(numMatch, `expected a number in pagination total: ${text}`).toBeTruthy();
-    const total = Number(numMatch![1]);
-    const expected =
-      total > 1
-        ? tInterp(loc, TOTAL_MULTI_KEY, { total })
-        : tInterp(loc, TOTAL_SINGLE_KEY, { total });
-    expect(text).toBe(expected);
+    await expect(totalEl).toHaveAttribute('data-i18n-key', /global\.txtTotal/);
+    await i18n.assertAllMarkedI18n(loc, {
+      label: `animal pagination locale=${locale}`,
+    });
 
     await page.goto(ROUTES.dashboard);
     await i18n.selectLanguage('en');
   });
 
-  test('TC08: switching language on animal or alerts page updates that page', async ({
+  test('TC08: switching language on animal page updates marked labels', async ({
     authenticatedDashboardSession,
   }) => {
-    // From Animal Management, change language; assert copy on that page.
     const farmPage = new FarmPage(authenticatedDashboardSession);
     const i18n = new I18nPage(authenticatedDashboardSession);
     const overview = new OverviewPage(authenticatedDashboardSession);
@@ -260,20 +226,17 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     const en = loadLocaleFlat('en');
 
     await i18n.selectLanguage(locale);
-    await expect(barnTitle).toHaveText(t(loc, BARN_DETAILS_KEY));
+    await i18n.assertAllMarkedI18n(loc, { label: `animal locale=${locale}` });
 
     await i18n.selectLanguage('en');
-    await expect(barnTitle).toHaveText(t(en, BARN_DETAILS_KEY));
+    await i18n.assertAllMarkedI18n(en, { label: 'animal locale=en' });
 
     await authenticatedDashboardSession.goto(ROUTES.dashboard);
   });
 
-  // --- Harder ---
-
   test('TC09: chart week labels and weather weekdays follow locale', async ({
     authenticatedDashboardSession,
   }) => {
-    // Tags chart x-axis uses txtThisWeek/txtWeek; weather weekdays match moment dddd.
     const farmPage = new FarmPage(authenticatedDashboardSession);
     const i18n = new I18nPage(authenticatedDashboardSession);
 
@@ -311,7 +274,6 @@ test.describe('i18n', { tag: '@i18n' }, () => {
           return name.charAt(0).toUpperCase() + name.slice(1);
         })
       );
-      // App uses lodash upperFirst on moment format('dddd').
       const actual = await i18n.weatherWeekdays().allTextContents();
       expect(actual.length).toBeGreaterThan(0);
       for (const day of actual) {
@@ -328,7 +290,6 @@ test.describe('i18n', { tag: '@i18n' }, () => {
   test('TC10: second tab sees same language after reload', async ({
     authenticatedDashboardSession,
   }) => {
-    // Same browser context: change locale on tab A; tab B reload shows same language.
     const farmPage = new FarmPage(authenticatedDashboardSession);
     const i18n = new I18nPage(authenticatedDashboardSession);
 
@@ -338,7 +299,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     const loc = loadLocaleFlat(locale);
 
     await i18n.selectLanguage(locale);
-    await expect(i18n.farmTagsTitle).toHaveText(t(loc, TAGS_TITLE_KEY));
+    await i18n.assertAllMarkedI18n(loc, { label: `tab A locale=${locale}` });
 
     const context = authenticatedDashboardSession.context();
     const page2 = await context.newPage();
@@ -350,7 +311,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
       await expect(i18n2.languageSelectorValue).toHaveText(
         new RegExp(locale.replace(/-/g, '[-\\s]?'), 'i')
       );
-      await expect(i18n2.farmTagsTitle).toHaveText(t(loc, TAGS_TITLE_KEY));
+      await i18n2.assertAllMarkedI18n(loc, { label: `tab B locale=${locale}` });
     } finally {
       await page2.close();
     }
@@ -361,7 +322,6 @@ test.describe('i18n', { tag: '@i18n' }, () => {
   test('TC11: UI does not show raw i18n keys', async ({
     authenticatedDashboardSession,
   }) => {
-    // After a language switch, visible text must not look like raw keys (nav./container./global.).
     const farmPage = new FarmPage(authenticatedDashboardSession);
     const i18n = new I18nPage(authenticatedDashboardSession);
 
@@ -380,7 +340,6 @@ test.describe('i18n', { tag: '@i18n' }, () => {
   test('TC12: tags chart tooltip still shows week date range after language switch', async ({
     authenticatedDashboardSession,
   }) => {
-    // Hover a bar; tooltip visible and contains DD/MM/YYYY range (formatDate).
     const farmPage = new FarmPage(authenticatedDashboardSession);
     const i18n = new I18nPage(authenticatedDashboardSession);
 
@@ -403,19 +362,14 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     const tooltip = chart.locator('.apexcharts-tooltip').first();
     await expect(tooltip).toBeVisible({ timeout: 8_000 });
     const tipText = (await tooltip.innerText()).replace(/\s+/g, ' ');
-    // formatDate uses DD/MM/YYYY HH:mm — range often "DD/MM/YYYY HH:mm - DD/MM/YYYY HH:mm"
     expect(tipText).toMatch(/\d{2}\/\d{2}\/\d{4}/);
 
     await i18n.selectLanguage('en');
   });
 
-  // --- Logout / re-auth last (intentional full login flow) ---
-
   test('TC04: sign-in screen follows persisted language after logout', async ({
     authenticatedDashboardSession: page,
   }) => {
-    // Logout; login button text matches persisted locale JSON (auth screens).
-    // Placed last-but-one so earlier TCs never re-select tenant/farm mid-suite.
     const farmPage = new FarmPage(page);
     const i18n = new I18nPage(page);
 
@@ -429,7 +383,14 @@ test.describe('i18n', { tag: '@i18n' }, () => {
 
     const loginButton = page.getByTestId('login-button');
     await expect(loginButton).toBeVisible();
-    await expect(loginButton).toHaveText(t(loc, SIGN_IN_KEY));
+    await expect(loginButton).toHaveAttribute(
+      'data-i18n-key',
+      'container.PageSignIn.btnSignIn'
+    );
+    await i18n.assertAllMarkedI18n(loc, {
+      minCount: 1,
+      label: `sign-in locale=${locale}`,
+    });
 
     const emailInput = page.getByTestId('email-input');
     await expect(emailInput).toHaveAttribute(
@@ -444,8 +405,6 @@ test.describe('i18n', { tag: '@i18n' }, () => {
   test('TC07: language persists after logout and login', async ({
     authenticatedDashboardSession: page,
   }) => {
-    // Switch locale → logout → login → dashboard still that locale + JSON labels.
-    // Last TC: full re-auth is part of the assertion.
     const farmPage = new FarmPage(page);
     const i18n = new I18nPage(page);
 
@@ -455,7 +414,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     const loc = loadLocaleFlat(locale);
 
     await i18n.selectLanguage(locale);
-    await expect(i18n.farmTagsTitle).toHaveText(t(loc, TAGS_TITLE_KEY));
+    await i18n.assertAllMarkedI18n(loc, { label: `before logout locale=${locale}` });
 
     await i18n.signOut();
     await loginAgain(page);
@@ -464,6 +423,6 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await expect(i18n.languageSelectorValue).toHaveText(
       new RegExp(locale.replace(/-/g, '[-\\s]?'), 'i')
     );
-    await expect(i18n.farmTagsTitle).toHaveText(t(loc, TAGS_TITLE_KEY));
+    await i18n.assertAllMarkedI18n(loc, { label: `after re-login locale=${locale}` });
   });
 });

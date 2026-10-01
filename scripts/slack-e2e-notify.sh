@@ -2,6 +2,15 @@
 # Post E2E workflow summary to Slack incoming webhook (CI only).
 set -euo pipefail
 
+# XLM_SLACK_NOTIFY=on|off — default on when webhook is set.
+NOTIFY="$(echo "${XLM_SLACK_NOTIFY:-on}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+case "$NOTIFY" in
+  off|0|false|no)
+    echo "XLM_SLACK_NOTIFY=${NOTIFY} — skip Slack notification"
+    exit 0
+    ;;
+esac
+
 if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
   echo "SLACK_WEBHOOK_URL not set — skip Slack notification"
   exit 0
