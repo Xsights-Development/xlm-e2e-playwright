@@ -1,5 +1,6 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage } from '@/pages/base.page.js';
+import { assertAllMarkedI18n } from '@/lib/i18n/assert-marked.js';
 
 /**
  * Language switcher helpers for i18n E2E.
@@ -113,5 +114,16 @@ export class I18nPage extends BasePage {
   /** Visible weekday labels in the weather panel (moment-localized). */
   weatherWeekdays(): Locator {
     return this.farmWeatherPanel.getByTestId('farm-weather-weekday');
+  }
+
+  markedI18nNodes(): Locator {
+    return this.page.locator('[data-i18n-key]:visible');
+  }
+
+  async assertAllMarkedI18n(
+    localeMap: Record<string, string>,
+    options?: { minCount?: number; label?: string }
+  ): Promise<number> {
+    return assertAllMarkedI18n(this.page, localeMap, options);
   }
 }

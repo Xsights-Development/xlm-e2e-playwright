@@ -17,11 +17,12 @@ on:
       languages:
         description: Include language suite (i18n). Slack /xlm-test-overview → /overview runs languages only (project=i18n).
         required: true
-        default: off
+        # Quote on/off — unquoted YAML 1.1 treats them as booleans; API then rejects string "on".
+        default: "off"
         type: choice
         options:
-          - off
-          - on
+          - "off"
+          - "on"
       grep:
         description: Optional --grep (e.g. @contract, @health, @i18n)
         required: false
@@ -35,6 +36,15 @@ on:
           - auto                 # from vars.APP_URL host
           - revised-ui-version   # force (dev/online)
           - staging              # force (demo/UAT)
+      xlm_slack_notify:
+        description: Post run summary to Slack (XLM_SLACK_NOTIFY)
+        required: true
+        # Quote on/off — unquoted YAML 1.1 treats them as booleans; workflow_dispatch API rejects non-string choice values (same pitfall as `languages`).
+        default: "on"
+        type: choice
+        options:
+          - "on"
+          - "off"
 
 permissions:
   id-token: write   # required for AWS OIDC assume-role
@@ -271,8 +281,9 @@ jobs:
           echo "Report link: ${URL}"
 
       - name: Notify Slack
-        if: always()
+        if: always() && github.event.inputs.xlm_slack_notify != 'off'
         env:
+          XLM_SLACK_NOTIFY: ${{ github.event.inputs.xlm_slack_notify }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           JOB_STATUS: ${{ job.status }}
           INPUT_PROJECT: ${{ github.event.inputs.project }}

@@ -61,7 +61,7 @@ npx playwright test --project=overview --grep @contract
 
 ## i18n
 
-See [e2e/i18n.md](./e2e/i18n.md) for the full TC01–TC12 table.
+See [e2e/i18n.md](./e2e/i18n.md) for the full TC01–TC14 table.
 
 ```bash
 npx playwright test --project=i18n

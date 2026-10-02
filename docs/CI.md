@@ -46,6 +46,8 @@ The workflow maps **`vars.*`** → URLs/identifiers and **`secrets.*`** → cred
 |-------------|---------|
 | `SLACK_WEBHOOK_URL` | Incoming Webhook URL (`https://hooks.slack.com/services/...`) for channel `#e2e-xlm-reports`. Job posts pass/fail + link when set; skipped if empty. |
 
+Toggle (does not remove the secret): set workflow input **xlm_slack_notify** to `off`, or env `XLM_SLACK_NOTIFY=off` in the notify script. Default is `on`.
+
 ### Repository secrets (optional — i18n / dashboard locales)
 
 | Secret name | Purpose |
@@ -60,7 +62,7 @@ If `APP_URL` is missing, the job fails early with a clear error (avoids `localho
 
 1. Push `.github/workflows/e2e-playwright.yml` to the default branch (or the branch you select when running).
 2. **Actions** → **E2E Playwright** → **Run workflow**.
-3. Choose **branch**, **project** (`all` | `farm` | `overview` | `i18n`), optional **grep**, and **languages** `on`/`off`.
+3. Choose **branch**, **project** (`all` | `farm` | `overview` | `i18n`), optional **grep**, **languages** `on`/`off`, and **xlm_slack_notify** `on`/`off`.
    - Slack (URLs cố định, không sửa được App):
      | Slash | Worker path | Chạy |
      |-------|-------------|------|
@@ -70,7 +72,7 @@ If `APP_URL` is missing, the job fails early with a clear error (avoids `localho
    - Path `/overview` **không** còn map sang Playwright `overview`; suite overview panel vẫn nằm trong `/all`.
    - `dashboard_ref=auto` maps from `APP_URL` when languages run.
 4. Open the run → download **playwright-report-…** artifact if tests fail (HTML under `reports/html`).
-5. If `SLACK_WEBHOOK_URL` is set, a summary is posted to the webhook channel after every run (success or failure). Logic lives in [`scripts/slack-e2e-notify.sh`](../scripts/slack-e2e-notify.sh).
+5. If `SLACK_WEBHOOK_URL` is set **and** `xlm_slack_notify`/`XLM_SLACK_NOTIFY` is not `off`, a summary is posted after every run. Logic: [`scripts/slack-e2e-notify.sh`](../scripts/slack-e2e-notify.sh).
 
 **Slack message includes:** colored sidebar (green / red / amber / grey), pass-rate bar (`████░░`), test counts, duration from JUnit, **per-case pass/fail list**, project/grep, target `APP_URL`, branch, who triggered the run, link to the workflow run, **HTML report artifact link** (download zip → open `html/index.html`), and a failed-tests block when applicable.
 
@@ -90,16 +92,18 @@ curl -X POST -H 'Content-type: application/json' \
 | `languages` | `on` / `off` — also add i18n when running farm/overview/all. Slack `/xlm-test-overview` uses `project=i18n` directly. |
 | `grep` | Passed to Playwright `--grep`; leave empty for full project |
 | `dashboard_ref` | `auto` (default) when languages run: map from `APP_URL`, else fallback `revised-ui-version` |
+| `xlm_slack_notify` | `on` (default) / `off` — maps to `XLM_SLACK_NOTIFY`; skip result webhook when `off` |
 
 Examples:
 
 - Full farm: `project=farm`, `languages=off`  
 - All core (farm + overview panels): `project=all`, `languages=off`  
 - Languages only: `project=i18n` (Actions) or Slack `/xlm-test-overview`
+- Silent run (no Slack summary): `xlm_slack_notify=off`
 
 ```bash
 gh workflow run e2e-playwright.yml --ref <e2e-branch> \
-  -f project=i18n -f languages=on -f dashboard_ref=auto
+  -f project=i18n -f languages=on -f dashboard_ref=auto -f xlm_slack_notify=off
 ```
 
 Worker (fixed URLs):
