@@ -13,7 +13,7 @@ import { getDashboardLocalesDir } from '@/lib/i18n/locales.js';
  * Prefer running with --project=i18n so both files execute; UI suite stays in i18n.spec.ts.
  */
 test.describe('i18n static', { tag: '@i18n' }, () => {
-  test('TC-STATIC-01: locale JSON files share the same keys as en', () => {
+  test('TC01: locale JSON files share the same keys as en', () => {
     const dir = getDashboardLocalesDir();
     test.info().annotations.push({
       type: 'note',
@@ -25,7 +25,7 @@ test.describe('i18n static', { tag: '@i18n' }, () => {
     expect(listLocaleFiles()).toEqual(locales);
   });
 
-  test('TC-STATIC-02: source t()/i18nKey literals exist in en.json when dashboard src is present', () => {
+  test('TC02: source t()/i18nKey literals exist in en.json when dashboard src is present', () => {
     const { enKeys } = assertLocaleParity();
     assertSourceKeysInEn(enKeys);
   });

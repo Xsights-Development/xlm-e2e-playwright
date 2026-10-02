@@ -36,12 +36,12 @@ function pickNonEnLocale(locales: string[]): string {
 
 test.describe('i18n', { tag: '@i18n' }, () => {
   // One browser login for the whole suite (worker fixture). Serial order.
-  // Logout TCs (TC04, TC07) run last so earlier cases stay on one session without re-auth.
-  // Static checks live in i18n-static.spec.ts and run first (alphabetical + workers:1).
+  // Logout TCs (TC06, TC09) run last so earlier cases stay on one session without re-auth.
+  // Static checks live in i18n-static.spec.ts as TC01/TC02 and run first (alphabetical + workers:1).
   test.describe.configure({ mode: 'serial' });
   test.setTimeout(120_000);
 
-  test('TC01: switching language updates marked farm labels from locale JSON', async ({
+  test('TC03: switching language updates marked farm labels from locale JSON', async ({
     authenticatedDashboardSession,
   }) => {
     const farmPage = new FarmPage(authenticatedDashboardSession);
@@ -66,7 +66,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await i18n.selectLanguage('en');
   });
 
-  test('TC02: reload keeps selected language', async ({
+  test('TC04: reload keeps selected language', async ({
     authenticatedDashboardSession,
   }) => {
     const farmPage = new FarmPage(authenticatedDashboardSession);
@@ -90,7 +90,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await i18n.selectLanguage('en');
   });
 
-  test('TC03: side nav labels follow selected language', async ({
+  test('TC05: side nav labels follow selected language', async ({
     authenticatedDashboardSession,
   }) => {
     const farmPage = new FarmPage(authenticatedDashboardSession);
@@ -121,7 +121,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await farmPage.verifyOnDashboard();
   });
 
-  test('TC05: overview page labels follow selected language', async ({
+  test('TC07: overview page labels follow selected language', async ({
     authenticatedDashboardSession,
   }) => {
     const farmPage = new FarmPage(authenticatedDashboardSession);
@@ -151,7 +151,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await i18n.selectLanguage('en');
   });
 
-  test('TC06: pagination total matches interpolated translation pattern', async ({
+  test('TC08: pagination total matches interpolated translation pattern', async ({
     authenticatedDashboardSession,
   }) => {
     const page = authenticatedDashboardSession;
@@ -199,7 +199,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await i18n.selectLanguage('en');
   });
 
-  test('TC08: switching language on animal page updates marked labels', async ({
+  test('TC10: switching language on animal page updates marked labels', async ({
     authenticatedDashboardSession,
   }) => {
     const farmPage = new FarmPage(authenticatedDashboardSession);
@@ -234,7 +234,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await authenticatedDashboardSession.goto(ROUTES.dashboard);
   });
 
-  test('TC09: chart week labels and weather weekdays follow locale', async ({
+  test('TC11: chart week labels and weather weekdays follow locale', async ({
     authenticatedDashboardSession,
   }) => {
     const farmPage = new FarmPage(authenticatedDashboardSession);
@@ -287,7 +287,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await i18n.selectLanguage('en');
   });
 
-  test('TC10: second tab sees same language after reload', async ({
+  test('TC12: second tab sees same language after reload', async ({
     authenticatedDashboardSession,
   }) => {
     const farmPage = new FarmPage(authenticatedDashboardSession);
@@ -319,7 +319,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await i18n.selectLanguage('en');
   });
 
-  test('TC11: UI does not show raw i18n keys', async ({
+  test('TC13: UI does not show raw i18n keys', async ({
     authenticatedDashboardSession,
   }) => {
     const farmPage = new FarmPage(authenticatedDashboardSession);
@@ -337,7 +337,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await i18n.selectLanguage('en');
   });
 
-  test('TC12: tags chart tooltip still shows week date range after language switch', async ({
+  test('TC14: tags chart tooltip still shows week date range after language switch', async ({
     authenticatedDashboardSession,
   }) => {
     const farmPage = new FarmPage(authenticatedDashboardSession);
@@ -367,7 +367,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await i18n.selectLanguage('en');
   });
 
-  test('TC04: sign-in screen follows persisted language after logout', async ({
+  test('TC06: sign-in screen follows persisted language after logout', async ({
     authenticatedDashboardSession: page,
   }) => {
     const farmPage = new FarmPage(page);
@@ -402,7 +402,7 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await farmPage.verifyOnDashboard();
   });
 
-  test('TC07: language persists after logout and login', async ({
+  test('TC09: language persists after logout and login', async ({
     authenticatedDashboardSession: page,
   }) => {
     const farmPage = new FarmPage(page);
