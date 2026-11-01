@@ -53,7 +53,8 @@ export default defineConfig({
     },
     {
       name: 'i18n',
-      testMatch: /i18n\.spec\.ts$/,
+      // Static first (i18n-static), then UI (i18n.spec) — alphabetical order within project.
+      testMatch: /i18n(-static)?\.spec\.ts$/,
       workers: 1,
       // MacBook Pro 16" M1 (~1792×1120 scaled): leave room for menu bar, dock, browser chrome.
       // Keep width ≥1024 so HorizontalNav (lg) still shows in room view.
