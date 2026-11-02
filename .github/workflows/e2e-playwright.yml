@@ -54,7 +54,8 @@ permissions:
 jobs:
   e2e:
     name: Playwright
-    runs-on: ubuntu-latest
+    # Playwright 1.56.1 has no Chromium build for ubuntu-26.04 (current ubuntu-latest).
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     steps:
