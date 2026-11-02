@@ -353,12 +353,30 @@ test.describe('i18n', { tag: '@i18n' }, () => {
     await chart.scrollIntoViewIfNeeded();
 
     const paths = chart.locator('.apexcharts-bar-series path');
-    const pathCount = await paths.count();
-    if (pathCount < 1) {
+    // Language switch remounts ApexCharts: the container is visible before bar paths exist.
+    try {
+      await expect(paths.first()).toBeVisible({ timeout: 15_000 });
+    } catch {
       test.skip(true, 'No apexcharts bar paths to hover');
     }
-
-    await paths.nth(Math.min(3, pathCount - 1)).hover({ force: true });
+    const pathCount = await paths.count();
+    await chart.scrollIntoViewIfNeeded();
+    const viewport = authenticatedDashboardSession.viewportSize() ?? {
+      width: 1440,
+      height: 900,
+    };
+    let hovered = false;
+    for (let i = 0; i < pathCount; i++) {
+      const box = await paths.nth(i).boundingBox();
+      if (!box || box.width < 2 || box.height < 2) continue;
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      if (x < 0 || y < 0 || x >= viewport.width || y >= viewport.height) continue;
+      await authenticatedDashboardSession.mouse.move(x, y);
+      hovered = true;
+      break;
+    }
+    expect(hovered, 'No bar inside the viewport to hover').toBe(true);
     const tooltip = chart.locator('.apexcharts-tooltip').first();
     await expect(tooltip).toBeVisible({ timeout: 8_000 });
     const tipText = (await tooltip.innerText()).replace(/\s+/g, ' ');
