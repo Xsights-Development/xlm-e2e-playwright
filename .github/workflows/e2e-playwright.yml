@@ -154,9 +154,9 @@ jobs:
           APP_API_FARM_IDENTIFIER: ${{ vars.APP_API_FARM_IDENTIFIER }}
           APP_TIMEZONE: ${{ vars.APP_TIMEZONE }}
           # Repository secrets (Settings → Actions → Secrets)
-          APP_USER: ${{ secrets.APP_USER }}
+          APP_USER: ${{ vars.APP_USER }}
           APP_PASS: ${{ secrets.APP_PASS }}
-          ADMIN_USER: ${{ secrets.ADMIN_USER }}
+          ADMIN_USER: ${{ vars.ADMIN_USER }}
           ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
           # Staging DB (read-only) — Playwright reads to verify tests
           # Reached via SSM port-forward → connect over localhost, not the real host.
