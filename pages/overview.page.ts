@@ -129,9 +129,35 @@ export class OverviewPage extends BasePage {
     await this.waitForPageLoad();
   }
 
+  /**
+   * Click a menu row that is not covered by the sticky header or a collapse title.
+   * Playwright's default scroll leaves the first Barns row under those layers.
+   */
+  private async clickUncovered(target: Locator): Promise<void> {
+    const count = await target.count();
+    let lastError: unknown;
+    const attempts = Math.min(count, 12);
+    for (let i = 0; i < attempts; i++) {
+      const item = target.nth(i);
+      if (!(await item.isVisible())) continue;
+      try {
+        await item.evaluate((el) => {
+          el.scrollIntoView({ block: 'center', inline: 'nearest' });
+        });
+        await item.click({ timeout: 2000 });
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError instanceof Error
+      ? lastError
+      : new Error('No clickable item in the Barns menu');
+  }
+
   /** Click first barn/room in FarmNavigation. */
   async selectFirstBarn(): Promise<void> {
-    await this.barnsItem.first().click();
+    await this.clickUncovered(this.barnsItem);
     await this.wait(500);
   }
 
@@ -146,7 +172,7 @@ export class OverviewPage extends BasePage {
     const section = this.page.locator(`[data-location-type="${locationType}"]`).first();
     try {
       await section.waitFor({ state: 'visible', timeout: 15000 });
-      await section.click();
+      await this.clickUncovered(section);
       await this.wait(300);
     } catch {
       // Category not in menu (e.g. tenant has no rooms of this type) or menu not ready; skip expand
@@ -219,7 +245,7 @@ export class OverviewPage extends BasePage {
       const byId = this.page.locator(`span[data-location-identifier="${locationIdentifier}"]`).first();
       try {
         await byId.waitFor({ state: 'visible', timeout: 8000 });
-        await byId.click();
+        await this.clickUncovered(byId);
       } catch {
         await this.selectFirstBarn();
       }
