@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { expect, type Page } from '@playwright/test';
-import { getDashboardLocalesDir, loadLocaleFlat, t } from '@/lib/i18n/locales.js';
+import { getDashboardLocalesDir, getDashboardRoot, loadLocaleFlat, t } from '@/lib/i18n/locales.js';
 
 const NUMERIC_PLACEHOLDERS = new Set(['total', 'count', 'number']);
 
@@ -95,10 +95,7 @@ export function listLocaleFiles(): string[] {
 }
 
 export function getDashboardSrcDir(): string {
-  const dashboardRoot =
-    process.env.DASHBOARD_ROOT ||
-    path.resolve(process.cwd(), '../xahwm-dashboard');
-  return path.join(dashboardRoot, 'src');
+  return path.join(getDashboardRoot(), 'src');
 }
 
 /** Literal keys from t("…") / t('…') / i18nKey="…" / i18nKey={'…'} in dashboard src. */

@@ -124,7 +124,7 @@ cp .env.example .env
 npm ci && npm run browsers && npm run test
 ```
 
-For i18n locally, keep `xahwm-dashboard` as a sibling of this repo, or set `DASHBOARD_ROOT`.
+For i18n locally, set `DASHBOARD_CHECKOUT_TOKEN` in `.env`. The suite sparse-checks out `xlm-dashboard` locales and stops if the token is missing. CI still checkouts in the workflow (`DASHBOARD_ROOT`); the secret is optional there when `github.token` can read the repo.
 
 ## 5. Troubleshooting
 

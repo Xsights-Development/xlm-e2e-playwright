@@ -1,22 +1,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-/**
- * Resolve xahwm-dashboard locale JSON directory.
- * Override with DASHBOARD_ROOT when the dashboard repo is not a sibling of this e2e repo.
- */
+/** Local sparse-checkout of xlm-dashboard (see lib/i18n/dashboard-checkout.ts). CI sets DASHBOARD_ROOT. */
+export function getDashboardRoot(): string {
+  return process.env.DASHBOARD_ROOT || path.resolve(process.cwd(), '.cache/xlm-dashboard');
+}
+
+/** Locale JSON directory: CI checkout or the local PAT sparse-checkout. */
 export function getDashboardLocalesDir(): string {
-  const dashboardRoot =
-    process.env.DASHBOARD_ROOT ||
-    path.resolve(process.cwd(), '../xahwm-dashboard');
-  return path.join(dashboardRoot, 'src/locales/lang');
+  return path.join(getDashboardRoot(), 'src/locales/lang');
 }
 
 export function loadLocaleFlat(locale: string): Record<string, string> {
   const filePath = path.join(getDashboardLocalesDir(), `${locale}.json`);
   if (!fs.existsSync(filePath)) {
     throw new Error(
-      `Locale file not found: ${filePath}. Set DASHBOARD_ROOT to the xahwm-dashboard repo.`
+      `Locale file not found: ${filePath}. Local i18n requires DASHBOARD_CHECKOUT_TOKEN to checkout Xsights-Development/xlm-dashboard.`
     );
   }
   return flatten(JSON.parse(fs.readFileSync(filePath, 'utf8')));

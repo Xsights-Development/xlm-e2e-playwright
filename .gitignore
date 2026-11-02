@@ -17,6 +17,9 @@ playwright/.cache/
 coverage/
 *.lcov
 
+# Local sparse-checkout of xlm-dashboard locales (PAT)
+.cache/
+
 # Environment variables
 .env
 .env.local

@@ -68,7 +68,7 @@ npx playwright test --project=i18n
 npx playwright test --project=i18n --grep @i18n
 ```
 
-Optional: `DASHBOARD_ROOT` if `xahwm-dashboard` is not a sibling of this repo.
+Local i18n requires `DASHBOARD_CHECKOUT_TOKEN` (see `.env.example`). Missing token fails `i18n-setup` before TC01.
 
 ## Probes (no browser)
 

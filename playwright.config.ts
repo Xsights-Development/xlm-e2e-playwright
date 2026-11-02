@@ -52,7 +52,12 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
     },
     {
+      name: 'i18n-setup',
+      testMatch: /i18n-checkout\.setup\.ts$/,
+    },
+    {
       name: 'i18n',
+      dependencies: ['i18n-setup'],
       // Static first (i18n-static), then UI (i18n.spec) — alphabetical order within project.
       testMatch: /i18n(-static)?\.spec\.ts$/,
       workers: 1,
