@@ -122,38 +122,72 @@ export class LoginPage extends BasePage {
 
     /**
      * Select farm from React-Select (.farm-select).
-     * Opens menu via .select__input-container, then picks [data-farm-identifier] or exact display text.
+     * Clicks the visible control to open the menu, then picks [data-farm-identifier] or exact display text.
+     * Options load after the farm list request, so the menu is reopened until an option appears.
      */
     async selectFarm(farmIdentifier: string | number): Promise<void> {
         const id = String(farmIdentifier).trim();
         const farmSelect = this.page.locator('.farm-select');
-        await farmSelect.waitFor({ state: 'visible', timeout: 10000 });
-        await farmSelect.locator('.select__input-container').click();
+        await farmSelect.waitFor({ state: 'visible', timeout: 15000 });
+        const control = farmSelect.locator('.select__control');
+        const menu = this.page.locator('.farm-select .select__menu');
+        const byIdentifier = menu.locator(`[data-farm-identifier="${id}"]`).first();
+        const byText = menu.locator('.select-option').filter({ hasText: id }).first();
+        const deadline = Date.now() + 15000;
 
-        const byIdentifier = this.page.locator(`[data-farm-identifier="${id}"]`).first();
-        if (await byIdentifier.isVisible({ timeout: 10000 }).catch(() => false)) {
-            await byIdentifier.click();
-        } else if (await this.page.getByText(id, { exact: true }).isVisible({ timeout: 3000 }).catch(() => false)) {
-            await this.page.getByText(id, { exact: true }).click();
-        } else {
-            throw new Error(
-                `Farm option not found for APP_FARM_IDENTIFIER="${id}". ` +
-                    'Use data-farm-identifier value or exact farm display name (e.g. "Groove Farm").',
-            );
+        while (Date.now() < deadline) {
+            if (await byIdentifier.isVisible()) {
+                await byIdentifier.click();
+                await expect(this.dashboardButton).toBeEnabled({ timeout: 10000 });
+                await this.wait(300);
+                return;
+            }
+            if (await byText.isVisible()) {
+                await byText.click();
+                await expect(this.dashboardButton).toBeEnabled({ timeout: 10000 });
+                await this.wait(300);
+                return;
+            }
+            const menuOpen = await this.page.locator('.farm-select .select__menu').isVisible();
+            if (!menuOpen) {
+                await control.click();
+            }
+            await this.wait(300);
         }
 
-        await expect(this.dashboardButton).toBeEnabled({ timeout: 10000 });
-        await this.wait(300);
+        throw new Error(
+            `Farm option not found for APP_FARM_IDENTIFIER="${id}". ` +
+                'Use data-farm-identifier value or exact farm display name (e.g. "Groove Farm").',
+        );
     }
 
     /**
-     * Click Next button after tenant selection.
-     * Waits for button to be enabled (form sets tenantIdentifier after option click).
+     * Click Next after tenant selection.
+     * The button stays enabled while farms load, but its onClick is ignored until the spinner is gone.
+     * A click in that window does not leave the tenant step, so retry until the farm form or dashboard appears.
      */
     async clickNext(): Promise<void> {
         await this.nextButton.waitFor({ state: 'visible', timeout: 10000 });
-        await expect(this.nextButton).toBeEnabled({ timeout: 10000 });
-        await this.nextButton.click();
+        const deadline = Date.now() + 20000;
+
+        while (Date.now() < deadline) {
+            await expect(this.nextButton).toBeEnabled({ timeout: 5000 });
+            if (await this.nextButton.locator('.animate-spin').isVisible()) {
+                await this.wait(200);
+                continue;
+            }
+
+            await this.nextButton.click();
+            const farmShown = await this.page
+                .locator('.farm-select')
+                .waitFor({ state: 'visible', timeout: 3000 })
+                .then(() => true)
+                .catch(() => false);
+            if (farmShown || this.isOnDashboard()) return;
+            await this.wait(300);
+        }
+
+        throw new Error('Tenant Next did not open the farm step or the dashboard.');
     }
 
     /**
@@ -222,10 +256,15 @@ export class LoginPage extends BasePage {
 
         if (this.isOnDashboard()) return;
 
-        
-        // Farm step uses React-Select class .farm-select (testid may not be on the visible node).
-        const farmStepVisible = await this.page.locator('.farm-select').isVisible({ timeout: 10000 }).catch(() => false);
-        if (farmStepVisible) {
+        // isVisible() does not wait (timeout is ignored). The farm form mounts after Next.
+        const farmStep = this.page.locator('.farm-select').or(this.dashboardButton);
+        const reachedFarmStep = await farmStep
+            .first()
+            .waitFor({ state: 'visible', timeout: 15000 })
+            .then(() => true)
+            .catch(() => false);
+
+        if (reachedFarmStep && !this.isOnDashboard()) {
             await this.selectFarm(farmIdentifier);
             await this.clickDashboard();
             await this.wait(2000);
