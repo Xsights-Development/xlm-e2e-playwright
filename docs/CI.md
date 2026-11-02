@@ -52,7 +52,7 @@ Toggle (does not remove the secret): set workflow input **xlm_slack_notify** to 
 
 | Secret name | Purpose |
 |-------------|---------|
-| `DASHBOARD_CHECKOUT_TOKEN` | PAT (or fine-grained token) with **Contents: Read** on `Xsights-Development/xahwm-dashboard`. Required when that repo is private — default `GITHUB_TOKEN` cannot clone sibling private repos. |
+| `DASHBOARD_CHECKOUT_TOKEN` | PAT (or fine-grained token) with **Contents: Read** on `Xsights-Development/xlm-dashboard`. Required when that repo is private — default `GITHUB_TOKEN` cannot clone sibling private repos. |
 
 Copy values from your working local `.env` (same UAT/staging target). Do **not** commit webhook URLs to git.
 

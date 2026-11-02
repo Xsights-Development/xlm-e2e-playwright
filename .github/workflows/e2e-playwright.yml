@@ -103,7 +103,7 @@ jobs:
           github.event.inputs.project == 'i18n'
         uses: actions/checkout@v4
         with:
-          repository: Xsights-Development/xahwm-dashboard
+          repository: Xsights-Development/xlm-dashboard
           ref: ${{ steps.dashboard_ref.outputs.ref }}
           path: xahwm-dashboard
           token: ${{ secrets.DASHBOARD_CHECKOUT_TOKEN || github.token }}
