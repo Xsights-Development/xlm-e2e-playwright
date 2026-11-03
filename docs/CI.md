@@ -9,31 +9,20 @@ Workflow: [`.github/workflows/e2e-playwright.yml`](../.github/workflows/e2e-play
 
 **Settings** → **Secrets and variables** → **Actions**. Names must match exactly.
 
-The workflow maps **`vars.*`** → tenant, farm, and location, and **`secrets.*`** → credentials. App URL and API hosts come from workflow input **target** via `configs/targets.json`.
+The workflow maps **`secrets.*`** → credentials. App URL, API hosts, tenant, farm, location, and timezone come from workflow input **target** via `configs/targets.json` (`tenantIdentifier`, `farmIdentifier`, `apiFarmIdentifier`, `locationType`, `locationIdentifier`, `timezone`).
 
 ### Repository variables (required)
 
 | Variable name | Same as local `.env` | Example / notes |
 |---------------|----------------------|-----------------|
-| `APP_TENANT_IDENTIFIER` | `APP_TENANT_IDENTIFIER` | Tenant after login |
-| `APP_FARM_IDENTIFIER` | `APP_FARM_IDENTIFIER` | Farm after login |
-| `APP_LOCATION_TYPE` | `APP_LOCATION_TYPE` | Barn category (Overview tests) |
-| `APP_LOCATION_IDENTIFIER` | `APP_LOCATION_IDENTIFIER` | Room id (Overview tests) |
-
-### Repository variables (optional)
-
-| Variable name | When needed |
-|-------------|-------------|
-| `APP_API_FARM_IDENTIFIER` | REST/Cube farm header when UI farm label ≠ API identifier |
-| `APP_TIMEZONE` | Override tenant timezone for Cube |
+| `APP_USER` | `APP_USER` | Login email |
+| `ADMIN_USER` | `ADMIN_USER` | Admin API username |
 
 ### Repository secrets (required)
 
 | Secret name | Same as local `.env` |
 |-------------|----------------------|
-| `APP_USER` | `APP_USER` |
 | `APP_PASS` | `APP_PASS` |
-| `ADMIN_USER` | `ADMIN_USER` |
 | `ADMIN_PASS` | `ADMIN_PASS` |
 
 ### Repository secrets (optional — Slack report)
@@ -87,7 +76,7 @@ curl -X POST -H 'Content-type: application/json' \
 | `project` | `farm` / `overview` / `all` (farm+overview panels); `i18n` = languages only |
 | `languages` | `on` / `off` — also add i18n when running farm/overview/all. Slack `/xlm-test-overview` uses `project=i18n` directly. |
 | `grep` | Passed to Playwright `--grep`; leave empty for full project |
-| `target` | `dev` (default) or `staging`. Sets app URL, APIs, and locale branch from `configs/targets.json` |
+| `target` | `dev` (default) or `staging`. Sets app URL, APIs, locale branch, tenant, farm, location, and timezone from `configs/targets.json` |
 | `xlm_slack_notify` | `on` (default) / `off` — maps to `XLM_SLACK_NOTIFY`; skip result webhook when `off` |
 
 Examples:
@@ -127,8 +116,8 @@ For i18n locally, set `DASHBOARD_CHECKOUT_TOKEN` in `.env`. The suite sparse-che
 | Issue | Check |
 |-------|--------|
 | `APP_URL is empty` | Workflow input **target** must be `dev` or `staging` so `configs/targets.json` can fill the URL |
-| Login / tenant failures | `vars` + `secrets` match UAT; app reachable from GitHub runners |
-| Cube / contract failures | `API_BASE_URL`, `CUBE_API_URL`, optional `APP_API_FARM_IDENTIFIER` |
+| Login / tenant failures | `E2E_TARGET` row in `configs/targets.json` plus `APP_USER` / `APP_PASS`; app reachable from GitHub runners |
+| Cube / contract failures | Target `apiBaseUrl`, `cubeApiUrl`, and `apiFarmIdentifier` |
 | Admin / business failures | `ADMIN_*` secrets; Admin API allows CI runner IPs if restricted |
 | Missing `en.json` / locale checkout | `dashboard_ref` exists; add `DASHBOARD_CHECKOUT_TOKEN` if dashboard is private |
 | i18n text mismatches | `dashboard_ref` must match the dashboard build deployed at `APP_URL` |

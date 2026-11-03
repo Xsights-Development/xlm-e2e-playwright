@@ -156,7 +156,7 @@ export class LoginPage extends BasePage {
         }
 
         throw new Error(
-            `Farm option not found for APP_FARM_IDENTIFIER="${id}". ` +
+            `Farm option not found for farmIdentifier="${id}". ` +
                 'Use data-farm-identifier value or exact farm display name (e.g. "Groove Farm").',
         );
     }

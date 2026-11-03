@@ -252,11 +252,12 @@ Compare UI hooks to **Admin API** expected values, not Cube replay. See [`PLAYWR
 
 ```typescript
 import { buildFarmTagsDeployedQuery } from '@/configs/cube-queries.js';
+import { currentTarget } from '@/configs/targets.js';
 
 const query = buildFarmTagsDeployedQuery({
   farmIdentifier: 'GROOVE',
   dateRange: { startDate: '...', endDate: '...' },
-  timezone: process.env.APP_TIMEZONE,
+  timezone: currentTarget().timezone,
 });
 const result = await cubeApi.load(query);
 const rows = cubeApi.tablePivot(result);

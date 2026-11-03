@@ -9,6 +9,18 @@ export type Target = {
   cubeApiUrl: string;
   adminUrl: string;
   dashboardRef: string;
+  /** Tenant selected after login and sent as X-Tenant-Identifier. */
+  tenantIdentifier: string;
+  /** Farm option after login (data-farm-identifier or display name). */
+  farmIdentifier: string;
+  /** X-Farm-Identifier when farmIdentifier is a UI label. */
+  apiFarmIdentifier: string;
+  /** Barn category (data-location-type). */
+  locationType: string;
+  /** Room selected for Overview (data-location-identifier). */
+  locationIdentifier: string;
+  /** Cube timezone when the farm payload has none. */
+  timezone: string;
 };
 
 const file = path.resolve(process.cwd(), 'configs/targets.json');

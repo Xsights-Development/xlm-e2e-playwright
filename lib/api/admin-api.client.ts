@@ -3,6 +3,7 @@
  * Cookie value format: Authorization="bearer <access_token>"
  */
 import { ADMIN_API, type AdminLoginResponse } from '@/configs/admin-api.js';
+import { APP_API } from '@/configs/app-api.js';
 import {
   ADMIN_FARM_PATHS,
   ORACLE_SPEC_IDS,
@@ -156,7 +157,7 @@ export class AdminApiClient {
     status?: AnimalListStatus | AnimalListStatus[];
   }): Promise<unknown> {
     const method = options?.method ?? 'GET';
-    const locationIdentifier = process.env.APP_LOCATION_IDENTIFIER ?? '';
+    const locationIdentifier = APP_API.locationIdentifier;
     const lastSeenAt = buildLastSeenAtString();
     const statuses: AnimalListStatus[] =
       options?.status == null
@@ -268,7 +269,7 @@ export class AdminApiClient {
   }
 
   /**
-   * Resolve Admin numeric farm id from UI `data-farm-id` or APP_FARM_IDENTIFIER (via list).
+   * Resolve Admin numeric farm id from UI `data-farm-id` or the target farmIdentifier (via list).
    */
   async resolveFarmAdminId(farmKey: string): Promise<string> {
     const key = farmKey.trim();
@@ -368,7 +369,7 @@ export class AdminApiClient {
     status: AnimalListStatus,
   ): Promise<number | null> {
     try {
-      const locationIdentifier = process.env.APP_LOCATION_IDENTIFIER ?? '';
+      const locationIdentifier = APP_API.locationIdentifier;
       const lastSeenAt = buildLastSeenAtString();
       const body: Record<string, unknown> = {
         page: 1,

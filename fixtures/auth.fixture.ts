@@ -9,13 +9,14 @@ import { ROUTES } from '@/configs/routes.js';
 
 import { currentTarget } from '@/configs/targets.js';
 
-const baseURL = currentTarget().appUrl;
+const target = currentTarget();
+const baseURL = target.appUrl;
 const testUser = process.env.APP_USER ?? 'user@example.com';
 const testPass = process.env.APP_PASS ?? 'password123';
-const testTenantIdentifier = process.env.APP_TENANT_IDENTIFIER ?? process.env.APP_TENANT ?? '';
-const testFarmIdentifier = process.env.APP_FARM_IDENTIFIER ?? process.env.APP_FARM ?? '';
-const testLocationType = process.env.APP_LOCATION_TYPE ?? undefined;
-const testLocationIdentifier = process.env.APP_LOCATION_IDENTIFIER ?? undefined;
+const testTenantIdentifier = target.tenantIdentifier;
+const testFarmIdentifier = target.farmIdentifier;
+const testLocationType = target.locationType || undefined;
+const testLocationIdentifier = target.locationIdentifier || undefined;
 
 const dashboardUrlRegex = new RegExp(ROUTES.dashboard.replace(/\//g, '\\/'));
 
