@@ -28,9 +28,11 @@ export default defineConfig({
   use: {
     baseURL: currentTarget().appUrl,
     headless: !isHeaded,
-    trace: 'on-first-retry',
+    // CI uploads reports/html to R2. Traces and video stay local-only so a failed run
+    // does not push those files into the bucket.
+    trace: process.env.CI ? 'off' : 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    video: process.env.CI ? 'off' : 'retain-on-failure',
     viewport: { width: 1920, height: 1200 } as ViewportSize,
     ignoreHTTPSErrors: true,
     actionTimeout: 10_000,

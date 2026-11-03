@@ -26,8 +26,7 @@ RUN_NUM="${RUN_NUMBER:-}"
 REPO="${GIT_REPO:-}"
 WORKFLOW="${WORKFLOW_NAME:-E2E Playwright}"
 APP_HOST="${APP_URL_HOST:-n/a}"
-REPORT_URL="${REPORT_URL:-$RUN_URL}"
-ARTIFACT_NAME="${ARTIFACT_NAME:-playwright-report}"
+REPORT_URL="${REPORT_URL:-}"
 if [ -n "$APP_HOST" ] && [ "$APP_HOST" != "n/a" ]; then
   APP_HOST=$(echo "$APP_HOST" | sed -E 's|^(https?://[^/]+).*|\1|')
 fi
@@ -71,8 +70,11 @@ if [ -z "$GREP" ]; then
   GREP_DISPLAY="(none)"
 fi
 
-REPORT_HINT="Download zip → open html/index.html (same as playwright show-report)"
-REPORT_LINK="<${REPORT_URL}|${ARTIFACT_NAME}>"
+REPORT_HINT="Open the HTML report in the browser"
+REPORT_LINK=""
+if [ -n "$REPORT_URL" ]; then
+  REPORT_LINK="<${REPORT_URL}|Open HTML report>"
+fi
 
 FOOTER="${REPO} · ${WORKFLOW} · run #${RUN_NUM}"
 TS=$(date -u +%s)
@@ -112,9 +114,11 @@ PAYLOAD=$(jq -n \
           {title: "Branch", value: $branch, short: true},
           {title: "Triggered by", value: $actor, short: true},
           {title: "Grep", value: $grep, short: true},
-          {title: "Run", value: ("<" + $url + "|Open in GitHub Actions>"), short: true},
-          {title: "HTML report", value: ($report_link + "\n_" + $report_hint + "_"), short: false}
+          {title: "Run", value: ("<" + $url + "|Open in GitHub Actions>"), short: true}
         ]
+        + if ($report_link | length) > 0 then
+            [{title: "HTML report", value: ($report_link + "\n_" + $report_hint + "_"), short: false}]
+          else [] end
         + if ($cases | length) > 0 then
             [{title: "Test cases", value: ("```\n" + $cases + "\n```"), short: false}]
           else [] end

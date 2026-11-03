@@ -48,7 +48,6 @@ on:
 permissions:
   id-token: write   # required for AWS OIDC assume-role
   contents: read
-  actions: read     # list run artifacts for Slack HTML report link
 
 jobs:
   e2e:
@@ -131,6 +130,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
+        id: e2e
         env:
           CI: true
           E2E_TARGET: ${{ github.event.inputs.target }}
@@ -242,40 +242,89 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Resolve HTML report artifact URL
+      - name: Upload HTML report to R2
         if: always()
-        id: report_artifact
+        id: r2_report
         env:
-          GH_TOKEN: ${{ github.token }}
-          ARTIFACT_NAME: playwright-report-${{ github.event.inputs.project }}-${{ github.run_number }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_REPORT_TOKEN: ${{ secrets.R2_REPORT_TOKEN }}
+          R2_PUBLIC_BASE: ${{ secrets.R2_PUBLIC_BASE }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          FALLBACK="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          URL="$FALLBACK"
-          for _ in 1 2 3 4 5 6 7 8; do
-            ID=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
-              --jq ".artifacts[] | select(.name==\"${ARTIFACT_NAME}\") | .id" | head -n1 || true)
-            if [ -n "${ID:-}" ]; then
-              URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${ID}"
-              break
-            fi
-            sleep 2
-          done
-          echo "url=${URL}" >> "$GITHUB_OUTPUT"
-          echo "name=${ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
-          echo "Report link: ${URL}"
+          echo "uploaded=false" >> "$GITHUB_OUTPUT"
+          echo "report_url=" >> "$GITHUB_OUTPUT"
+
+          if [ ! -f reports/html/index.html ]; then
+            echo "No reports/html/index.html — skip R2 upload"
+            exit 0
+          fi
+
+          missing=()
+          [ -z "${CLOUDFLARE_API_TOKEN:-}" ] && missing+=(CLOUDFLARE_API_TOKEN)
+          [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ] && missing+=(CLOUDFLARE_ACCOUNT_ID)
+          [ -z "${R2_BUCKET:-}" ] && missing+=(R2_BUCKET)
+          [ -z "${R2_REPORT_TOKEN:-}" ] && missing+=(R2_REPORT_TOKEN)
+          [ -z "${R2_PUBLIC_BASE:-}" ] && missing+=(R2_PUBLIC_BASE)
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::warning::R2 upload skipped, missing: ${missing[*]}"
+            exit 0
+          fi
+
+          content_type() {
+            case "${1##*.}" in
+              html|htm) echo "text/html; charset=utf-8" ;;
+              js|mjs) echo "text/javascript; charset=utf-8" ;;
+              css) echo "text/css; charset=utf-8" ;;
+              json) echo "application/json" ;;
+              png) echo "image/png" ;;
+              jpg|jpeg) echo "image/jpeg" ;;
+              gif) echo "image/gif" ;;
+              svg) echo "image/svg+xml" ;;
+              webp) echo "image/webp" ;;
+              woff) echo "font/woff" ;;
+              woff2) echo "font/woff2" ;;
+              txt|md) echo "text/plain; charset=utf-8" ;;
+              *) echo "application/octet-stream" ;;
+            esac
+          }
+
+          while IFS= read -r -d '' file; do
+            rel="${file#reports/html/}"
+            case "${rel##*.}" in
+              webm|mp4|zip)
+                echo "skip ${rel}"
+                continue
+                ;;
+            esac
+            key="runs/${RUN_ID}/${rel}"
+            npx --yes wrangler@4 r2 object put "${R2_BUCKET}/${key}" \
+              --file="$file" \
+              --content-type="$(content_type "$rel")" \
+              --remote
+          done < <(find reports/html -type f -print0)
+
+          base="${R2_PUBLIC_BASE%/}"
+          echo "uploaded=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "report_url<<EOF"
+            echo "${base}/r/${R2_REPORT_TOKEN}/${RUN_ID}/index.html"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "Uploaded HTML report for run ${RUN_ID}"
 
       - name: Notify Slack
         if: always() && github.event.inputs.xlm_slack_notify != 'off'
         env:
           XLM_SLACK_NOTIFY: ${{ github.event.inputs.xlm_slack_notify }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          JOB_STATUS: ${{ job.status }}
+          JOB_STATUS: ${{ steps.e2e.outcome || job.status }}
           INPUT_PROJECT: ${{ github.event.inputs.project }}
           INPUT_GREP: ${{ github.event.inputs.grep }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          REPORT_URL: ${{ steps.report_artifact.outputs.url }}
-          ARTIFACT_NAME: ${{ steps.report_artifact.outputs.name }}
+          REPORT_URL: ${{ steps.r2_report.outputs.report_url }}
           GIT_BRANCH: ${{ github.ref_name }}
           GIT_ACTOR: ${{ github.actor }}
           RUN_NUMBER: ${{ github.run_number }}

@@ -141,6 +141,105 @@ function slackMessage(dispatch) {
     return `${title}\n${note}\n<${ACTIONS_URL}|_View this run_>`;
 }
 
+function tokensMatch(provided, expected) {
+    const encoder = new TextEncoder();
+    const left = encoder.encode(String(provided));
+    const right = encoder.encode(String(expected));
+    if (left.byteLength !== right.byteLength) {
+        const dummy = new Uint8Array(left.byteLength);
+        crypto.subtle.timingSafeEqual(left, dummy);
+        return false;
+    }
+    return crypto.subtle.timingSafeEqual(left, right);
+}
+
+function decodeSegment(value) {
+    try {
+        return decodeURIComponent(value);
+    } catch {
+        return null;
+    }
+}
+
+function parseReportRequest(pathname) {
+    const parts = pathname.split("/").filter(Boolean);
+    if (parts.length < 4 || parts[0] !== "r") return null;
+
+    const token = decodeSegment(parts[1]);
+    const runId = decodeSegment(parts[2]);
+    if (!token || !runId || !/^\d+$/.test(runId)) return null;
+
+    const rest = [];
+    for (const part of parts.slice(3)) {
+        const decoded = decodeSegment(part);
+        if (!decoded || decoded === "." || decoded === "..") return null;
+        rest.push(decoded);
+    }
+    return { token, key: `runs/${runId}/${rest.join("/")}` };
+}
+
+function contentTypeForKey(key) {
+    const ext = key.includes(".") ? key.slice(key.lastIndexOf(".") + 1).toLowerCase() : "";
+    switch (ext) {
+        case "html":
+        case "htm":
+            return "text/html; charset=utf-8";
+        case "js":
+        case "mjs":
+            return "text/javascript; charset=utf-8";
+        case "css":
+            return "text/css; charset=utf-8";
+        case "json":
+            return "application/json";
+        case "png":
+            return "image/png";
+        case "jpg":
+        case "jpeg":
+            return "image/jpeg";
+        case "gif":
+            return "image/gif";
+        case "svg":
+            return "image/svg+xml";
+        case "webp":
+            return "image/webp";
+        case "woff":
+            return "font/woff";
+        case "woff2":
+            return "font/woff2";
+        case "txt":
+        case "md":
+            return "text/plain; charset=utf-8";
+        default:
+            return "application/octet-stream";
+    }
+}
+
+async function serveReport(request, env) {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("Method not allowed\n", { status: 405 });
+    }
+
+    const parsed = parseReportRequest(new URL(request.url).pathname);
+    const expected = String(env.REPORT_TOKEN || "");
+    if (!parsed || !expected || !env.REPORTS || !tokensMatch(parsed.token, expected)) {
+        return new Response("Not found\n", { status: 404 });
+    }
+
+    const object = await env.REPORTS.get(parsed.key);
+    if (!object) return new Response("Not found\n", { status: 404 });
+
+    const headers = new Headers();
+    object.writeHttpMetadata(headers);
+    headers.set("Cache-Control", "private, max-age=300");
+    if (!headers.has("content-type")) {
+        headers.set("content-type", contentTypeForKey(parsed.key));
+    }
+    return new Response(request.method === "HEAD" ? null : object.body, {
+        status: 200,
+        headers,
+    });
+}
+
 function jsonResponse(body, status = 200) {
     return new Response(body, {
         status,
@@ -234,6 +333,8 @@ function respondHealth(env) {
             env: {
                 HOOK_SECRET: hasHookSecret,
                 GH_PAT: hasGhPat,
+                REPORT_TOKEN: Boolean(env.REPORT_TOKEN),
+                REPORTS: Boolean(env.REPORTS),
             },
         }),
         ok ? 200 : 503,
@@ -250,6 +351,10 @@ export default {
                 return new Response("Method not allowed\n", { status: 405 });
             }
             return respondHealth(env);
+        }
+
+        if (path.startsWith("/r/")) {
+            return serveReport(request, env);
         }
 
         if (request.method !== "POST") {

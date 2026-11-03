@@ -31,6 +31,18 @@ The workflow maps **`secrets.*`** → credentials. App URL, API hosts, tenant, f
 |-------------|---------|
 | `SLACK_WEBHOOK_URL` | Incoming Webhook URL (`https://hooks.slack.com/services/...`) for channel `#e2e-xlm-reports`. Job posts pass/fail + link when set; skipped if empty. |
 
+### Repository secrets (optional — HTML report on R2)
+
+| Secret name | Purpose |
+|-------------|---------|
+| `CLOUDFLARE_API_TOKEN` | API token `xlm-e2e-r2-upload` (R2 Edit + Account Settings Read). Used by `wrangler r2 object put`. |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account id from the R2 overview page. |
+| `R2_BUCKET` | `xlm-e2e-reports` |
+| `R2_REPORT_TOKEN` | Same string as Worker secret `REPORT_TOKEN`. |
+| `R2_PUBLIC_BASE` | Worker origin, no trailing slash. Example: `https://xlm-e2e.groove-app-tester.workers.dev` |
+
+Dashboard steps (bucket, lifecycle, binding `REPORTS`) are in [`clouflare/README.md`](../clouflare/README.md). Objects live at `runs/<run id>/...` and the bucket lifecycle deletes that prefix after 14 days. The GitHub artifact upload stays as a 14-day backup. Slack does not link to that artifact.
+
 Toggle (does not remove the secret): set workflow input **xlm_slack_notify** to `off`, or env `XLM_SLACK_NOTIFY=off` in the notify script. Default is `on`.
 
 ### Repository secrets (optional — i18n / dashboard locales)
@@ -56,10 +68,10 @@ If `APP_URL` is missing, the job fails early with a clear error (avoids `localho
      | `/xlm-test-overview` | `/overview` | **shared** — languages (`project=i18n`) |
    - Path `/overview` **không** còn map sang Playwright `overview`; suite overview panel vẫn nằm trong `/all`.
    - `dashboard_ref=auto` maps from `APP_URL` when languages run.
-4. Open the run → download **playwright-report-…** artifact if tests fail (HTML under `reports/html`).
+4. Open the run → download **playwright-report-…** only if the Slack report link is missing (HTML under `reports/html`). When upload succeeds, open the **HTML report** link in Slack instead.
 5. If `SLACK_WEBHOOK_URL` is set **and** `xlm_slack_notify`/`XLM_SLACK_NOTIFY` is not `off`, a summary is posted after every run. Logic: [`scripts/slack-e2e-notify.sh`](../scripts/slack-e2e-notify.sh).
 
-**Slack message includes:** colored sidebar (green / red / amber / grey), pass-rate bar (`████░░`), test counts, duration from JUnit, **per-case pass/fail list**, project/grep, target `APP_URL`, branch, who triggered the run, link to the workflow run, **HTML report artifact link** (download zip → open `html/index.html`), and a failed-tests block when applicable.
+**Slack message includes:** colored sidebar (green / red / amber / grey), pass-rate bar (`████░░`), test counts, duration from JUnit, **per-case pass/fail list**, project/grep, target host, branch, who triggered the run, link to the workflow run, and a failed-tests block when applicable. The **HTML report** field is added only after `reports/html/index.html` is uploaded to R2. The result color follows the test step, so a missing report does not by itself turn a green run red in Slack.
 
 ### Test Slack webhook (one-off)
 
@@ -122,6 +134,7 @@ For i18n locally, set `DASHBOARD_CHECKOUT_TOKEN` in `.env`. The suite sparse-che
 | Missing `en.json` / locale checkout | `dashboard_ref` exists; add `DASHBOARD_CHECKOUT_TOKEN` if dashboard is private |
 | i18n text mismatches | `dashboard_ref` must match the dashboard build deployed at `APP_URL` |
 | Empty report artifact | Job cancelled before tests finished; inspect job logs |
+| Slack has no HTML report link | `reports/html/index.html` was missing, or an R2 secret above is empty. Check **Upload HTML report to R2**. The Worker must be redeployed from `clouflare/worker.js` with binding `REPORTS` and secret `REPORT_TOKEN`. |
 | No Slack message | Add secret `SLACK_WEBHOOK_URL`; check **Notify Slack** step log (curl errors) |
 
 Do not commit `.env` — only store values in GitHub Actions secrets.
