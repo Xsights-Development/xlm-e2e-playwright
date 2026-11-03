@@ -5,7 +5,13 @@ import { OverviewPage } from '@/pages/overview.page.js';
 import { I18nPage } from '@/pages/i18n.page.js';
 import { currentTarget } from '@/configs/targets.js';
 import { ROUTES } from '@/configs/routes.js';
-import { loadLocaleFlat, t, toMomentLocale } from '@/lib/i18n/locales.js';
+import {
+  assertLocaleParity,
+  assertSourceKeysInEn,
+  listLocaleFiles,
+} from '@/lib/i18n/assert-marked.js';
+import { ensureDashboardLocales } from '@/lib/i18n/dashboard-checkout.js';
+import { getDashboardLocalesDir, loadLocaleFlat, t, toMomentLocale } from '@/lib/i18n/locales.js';
 import moment from 'moment-timezone';
 import '@/lib/i18n/moment-locales.js';
 
@@ -35,10 +41,39 @@ function pickNonEnLocale(locales: string[]): string {
   return nonEn;
 }
 
+test.describe('i18n static', { tag: '@i18n' }, () => {
+  test.beforeAll(({}, testInfo) => {
+    testInfo.setTimeout(120_000);
+    ensureDashboardLocales();
+  });
+
+  test('TC01: locale JSON files share the same keys as en', () => {
+    const dir = getDashboardLocalesDir();
+    test.info().annotations.push({
+      type: 'note',
+      description: `DASHBOARD locales: ${dir}`,
+    });
+    const { locales, enKeys } = assertLocaleParity();
+    expect(locales.length).toBeGreaterThan(1);
+    expect(enKeys.length).toBeGreaterThan(0);
+    expect(listLocaleFiles()).toEqual(locales);
+  });
+
+  test('TC02: source t()/i18nKey literals exist in en.json when dashboard src is present', () => {
+    const { enKeys } = assertLocaleParity();
+    assertSourceKeysInEn(enKeys);
+  });
+});
+
 test.describe('i18n', { tag: '@i18n' }, () => {
+  test.beforeAll(({}, testInfo) => {
+    testInfo.setTimeout(120_000);
+    ensureDashboardLocales();
+  });
+
   // One browser login for the whole suite (worker fixture). Serial order.
   // Logout TCs (TC06, TC09) run last so earlier cases stay on one session without re-auth.
-  // Static checks live in i18n-static.spec.ts as TC01/TC02 and run first (alphabetical + workers:1).
+  // TC01 and TC02 live in the describe above and do not open a browser.
   test.describe.configure({ mode: 'serial' });
   test.setTimeout(120_000);
 

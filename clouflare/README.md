@@ -44,10 +44,10 @@ Do this once on the Cloudflare account. The repo cannot create the bucket or the
    - No Workers script permission
 6. Copy **Account ID** from the R2 overview page.
 7. GitHub repo → **Settings → Secrets and variables → Actions**:
-   - `CLOUDFLARE_API_TOKEN` — the API token
-   - `CLOUDFLARE_ACCOUNT_ID` — Account ID
-   - `R2_BUCKET` — `xlm-e2e-reports`
-   - `R2_REPORT_TOKEN` — the same string as Worker secret `REPORT_TOKEN`
-   - `R2_PUBLIC_BASE` — Worker origin, no trailing slash, e.g. `https://xlm-e2e.groove-app-tester.workers.dev`
+   - Secret `CLOUDFLARE_API_TOKEN` — the API token
+   - Secret `R2_REPORT_TOKEN` — the same string as Worker secret `REPORT_TOKEN`
+   - Variable `CLOUDFLARE_ACCOUNT_ID` — Account ID
+   - Variable `R2_BUCKET` — `xlm-e2e-reports`
+   - Variable `R2_PUBLIC_BASE` — Worker origin, no trailing slash, e.g. `https://xlm-e2e.groove-app-tester.workers.dev`
 
 There is no `wrangler.toml` in this repo. After `worker.js` changes, paste that file into the Cloudflare editor and deploy. Keep `worker.origin.js` unchanged unless you intentionally refresh the baseline backup.

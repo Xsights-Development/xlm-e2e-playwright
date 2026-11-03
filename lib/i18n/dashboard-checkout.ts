@@ -12,12 +12,17 @@ export function resolveDashboardRef(): string {
   return currentTarget().dashboardRef;
 }
 
+let localesReady = false;
+
 /**
  * Local i18n: sparse-checkout src/locales/lang with DASHBOARD_CHECKOUT_TOKEN.
  * Missing token throws — do not fall back to a sibling working copy.
  * CI already checks the repo out and sets DASHBOARD_ROOT; this is a no-op there.
+ * Called from the i18n suite beforeAll, not as its own test.
  */
 export function ensureDashboardLocales(): void {
+  if (localesReady) return;
+
   if (process.env.CI === 'true') {
     const enJson = path.join(getDashboardLocalesDir(), 'en.json');
     if (!fs.existsSync(enJson)) {
@@ -25,6 +30,7 @@ export function ensureDashboardLocales(): void {
         `CI dashboard locales missing at ${enJson}. The workflow must checkout ${REPO} and set DASHBOARD_ROOT.`,
       );
     }
+    localesReady = true;
     return;
   }
 
@@ -56,6 +62,7 @@ export function ensureDashboardLocales(): void {
     );
   }
   console.log(`Dashboard locales: ${REPO}@${ref} → ${dest}`);
+  localesReady = true;
 }
 
 function git(args: string[], cwd: string, token: string): void {

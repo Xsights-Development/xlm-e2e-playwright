@@ -247,10 +247,10 @@ jobs:
         id: r2_report
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
           R2_REPORT_TOKEN: ${{ secrets.R2_REPORT_TOKEN }}
-          R2_PUBLIC_BASE: ${{ secrets.R2_PUBLIC_BASE }}
+          R2_PUBLIC_BASE: ${{ vars.R2_PUBLIC_BASE }}
           RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
