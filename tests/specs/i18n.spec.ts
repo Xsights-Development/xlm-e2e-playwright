@@ -41,12 +41,14 @@ function pickNonEnLocale(locales: string[]): string {
   return nonEn;
 }
 
-test.describe('i18n static', { tag: '@i18n' }, () => {
+test.describe('i18n', () => {
   test.beforeAll(({}, testInfo) => {
     testInfo.setTimeout(120_000);
     ensureDashboardLocales();
   });
 
+  // TC01 and TC02 do not open a browser. They sit in this describe so the report
+  // title is "i18n › TC…", with the project chip as the only i18n badge.
   test('TC01: locale JSON files share the same keys as en', () => {
     const dir = getDashboardLocalesDir();
     test.info().annotations.push({
@@ -63,17 +65,9 @@ test.describe('i18n static', { tag: '@i18n' }, () => {
     const { enKeys } = assertLocaleParity();
     assertSourceKeysInEn(enKeys);
   });
-});
 
-test.describe('i18n', { tag: '@i18n' }, () => {
-  test.beforeAll(({}, testInfo) => {
-    testInfo.setTimeout(120_000);
-    ensureDashboardLocales();
-  });
-
-  // One browser login for the whole suite (worker fixture). Serial order.
+  // One browser login for the UI cases (worker fixture). Serial order.
   // Logout TCs (TC06, TC09) run last so earlier cases stay on one session without re-auth.
-  // TC01 and TC02 live in the describe above and do not open a browser.
   test.describe.configure({ mode: 'serial' });
   test.setTimeout(120_000);
 

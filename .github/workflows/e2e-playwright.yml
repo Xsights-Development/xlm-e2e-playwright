@@ -24,7 +24,7 @@ on:
           - "off"
           - "on"
       grep:
-        description: Optional --grep (e.g. @contract, @health, @i18n)
+        description: Optional --grep (e.g. @contract, @health)
         required: false
         default: ''
       target:

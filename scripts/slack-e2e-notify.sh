@@ -53,14 +53,14 @@ case "$STATUS" in
     ;;
 esac
 
-JUNIT_JSON='{"summary":"n/a","bar":"n/a","duration":"n/a","failed":"","cases":""}'
+JUNIT_JSON='{"summary":"n/a","bar":"n/a","duration":"n/a","failed":"","cases":"","rows":[]}'
 if [ -f reports/junit.xml ]; then
   JUNIT_JSON=$(python3 scripts/junit-slack-summary.py reports/junit.xml reports/results.json "${REPORT_URL:-}" 2>/dev/null || echo "$JUNIT_JSON")
 fi
 JUNIT_SUMMARY=$(echo "$JUNIT_JSON" | jq -r '.summary')
 PASS_RATE_BAR=$(echo "$JUNIT_JSON" | jq -r '.bar')
 DURATION=$(echo "$JUNIT_JSON" | jq -r '.duration')
-CASES_LIST=$(echo "$JUNIT_JSON" | jq -r '.cases // empty')
+CASE_ROWS=$(echo "$JUNIT_JSON" | jq -c '.rows // []')
 
 REPORT_HINT="Open the report in the browser"
 REPORT_LINK=""
@@ -82,36 +82,64 @@ PAYLOAD=$(jq -n \
   --arg branch "$BRANCH" \
   --arg actor "$ACTOR" \
   --arg host "$APP_HOST" \
-  --arg cases "$CASES_LIST" \
+  --argjson rows "$CASE_ROWS" \
   --arg report_link "$REPORT_LINK" \
   --arg report_hint "$REPORT_HINT" \
   --arg footer "$FOOTER" \
   --argjson ts "$TS" \
   '{
-    text: ($emoji + " XLM E2E Playwright — " + $result),
+    text: ("XLM E2E Playwright — " + $result),
     attachments: [{
       color: $color,
-      mrkdwn_in: ["fields", "text"],
-      fields: (
+      fallback: ("XLM E2E Playwright — " + $result),
+      blocks: (
         [
-          {title: "Result", value: $result, short: true},
-          {title: "Duration", value: $duration, short: true},
-          {title: "Tests", value: $junit, short: true},
-          {title: "Pass rate", value: $bar, short: true},
-          {title: "Target", value: $host, short: true},
-          {title: "Level", value: $project, short: true},
-          {title: "Branch", value: $branch, short: true},
-          {title: "Triggered by", value: $actor, short: true}
+          {
+            type: "section",
+            fields: (
+              [
+                {type: "mrkdwn", text: ("*Result*\n" + $result)},
+                {type: "mrkdwn", text: ("*Duration*\n" + $duration)},
+                {type: "mrkdwn", text: ("*Tests*\n" + $junit)},
+                {type: "mrkdwn", text: ("*Pass rate*\n" + $bar)},
+                {type: "mrkdwn", text: ("*Target*\n" + $host)},
+                {type: "mrkdwn", text: ("*Level*\n" + $project)},
+                {type: "mrkdwn", text: ("*Branch*\n" + $branch)},
+                {type: "mrkdwn", text: ("*Triggered by*\n" + $actor)}
+              ]
+              + if ($report_link | length) > 0 then
+                  [{type: "mrkdwn", text: ("*Reports*\n" + $report_link + "\n_" + $report_hint + "_")}]
+                else [] end
+            )
+          }
         ]
-        + if ($report_link | length) > 0 then
-            [{title: "Reports", value: ($report_link + "\n_" + $report_hint + "_"), short: false}]
+        + if ($rows | length) > 0 then
+            [{type: "section", text: {type: "mrkdwn", text: "*Test cases*"}}]
+            + (
+                [$rows | to_entries | group_by(.key / 10 | floor)[] | map(.value)]
+                | map({
+                    type: "rich_text",
+                    elements: map(
+                      {
+                        type: "rich_text_section",
+                        elements: (
+                          (if .mark != "" then [{type: "text", text: (.mark + " "), style: {code: true}}] else [] end)
+                          + (
+                              if .url != "" then
+                                [{type: "link", url: .url, text: .code, style: {code: true}}]
+                              else
+                                [{type: "text", text: .code, style: {code: true}}]
+                              end
+                            )
+                          + (if .rest != "" then [{type: "text", text: .rest, style: {code: true}}] else [] end)
+                        )
+                      }
+                    )
+                  })
+              )
           else [] end
-        + if ($cases | length) > 0 then
-            [{title: "Test cases", value: $cases, short: false}]
-          else [] end
-      ),
-      footer: $footer,
-      ts: $ts
+        + [{type: "context", elements: [{type: "mrkdwn", text: $footer}]}]
+      )
     }]
   }')
 

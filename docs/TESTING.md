@@ -65,7 +65,7 @@ See [e2e/i18n.md](./e2e/i18n.md) for the full TC01–TC14 table.
 
 ```bash
 npx playwright test --project=i18n
-npx playwright test --project=i18n --grep @i18n
+npx playwright test --project=i18n
 ```
 
 Local i18n requires `DASHBOARD_CHECKOUT_TOKEN` (see `.env.example`). The suite checks out locales in `beforeAll` before TC01. That step is not a test case. Missing token fails the suite.

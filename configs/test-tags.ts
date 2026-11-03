@@ -12,7 +12,4 @@ export const FARM_GREP = {
   inventory: '@inventory',
 } as const;
 
-/** Locale switch suite (i18n.spec.ts) */
-export const I18N_GREP = {
-  all: '@i18n',
-} as const;
+/** Locale suite is selected with --project=i18n. It has no extra @i18n tag, so the HTML report shows one i18n chip. */

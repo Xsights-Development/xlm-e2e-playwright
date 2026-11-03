@@ -9,9 +9,8 @@ import sys
 import xml.etree.ElementTree as ET
 from urllib.parse import quote
 
-# Slack attachment field value soft limit — keep room for other fields.
-MAX_CASES_CHARS = 2800
 TC_CODE = re.compile(r"^(TC\d+)\b")
+MAX_ROWS = 40
 FAILED_STATUSES = {"unexpected", "failed", "timedOut", "interrupted"}
 
 
@@ -33,51 +32,46 @@ def display_name(raw: str) -> str:
     return name
 
 
-def slack_escape(text: str) -> str:
-    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-
-def case_line(title: str, failed: bool, test_id: str, report_url: str) -> str:
-    """Same shape for pass and fail. Both link to that test when a report URL exists."""
+def case_row(title: str, failed: bool, test_id: str, report_url: str, skipped: bool = False) -> dict:
+    """One Slack line. Pass and fail share the shape. Both link when a report URL exists."""
     title = display_name(title)
-    mark = "❌" if failed else "✅"
-    code = TC_CODE.match(title)
-    if report_url and test_id:
-        url = report_url.split("#", 1)[0] + "#?testId=" + quote(test_id, safe="")
-        if code:
-            rest = title[code.end() :]
-            label = f"<{url}|{code.group(1)}>{slack_escape(rest)}"
-        else:
-            label = f"<{url}|{slack_escape(title)}>"
+    if skipped:
+        mark = "⏭"
     else:
-        label = slack_escape(title)
-    return f"{mark} {label}"
+        mark = "❌" if failed else "✅"
+    code_match = TC_CODE.match(title)
+    if code_match:
+        code = code_match.group(1)
+        rest = title[code_match.end() :]
+    else:
+        code = title
+        rest = ""
+    url = ""
+    if report_url and test_id and not skipped:
+        url = report_url.split("#", 1)[0] + "#?testId=" + quote(test_id, safe="")
+    return {"mark": mark, "code": code, "rest": rest, "url": url}
 
 
-def fit_cases(lines: list[str]) -> str:
-    kept: list[str] = []
-    used = 0
-    for i, line in enumerate(lines):
-        add = len(line) + (1 if kept else 0)
-        if used + add > MAX_CASES_CHARS:
-            kept.append(f"… +{len(lines) - i} more")
-            break
-        kept.append(line)
-        used += add
-    return "\n".join(kept)
+def cap_rows(rows: list[dict], report_url: str) -> list[dict]:
+    if len(rows) <= MAX_ROWS:
+        return rows
+    extra = len(rows) - MAX_ROWS
+    more_url = report_url.split("#", 1)[0] if report_url else ""
+    return rows[:MAX_ROWS] + [
+        {"mark": "", "code": f"… +{extra} more", "rest": "", "url": more_url}
+    ]
 
 
-def cases_from_junit(root: ET.Element) -> list[str]:
-    lines: list[str] = []
+def cases_from_junit(root: ET.Element) -> list[dict]:
+    rows: list[dict] = []
     for tc in root.iter("testcase"):
         title = tc.attrib.get("name") or "unknown"
-        if tc.find("failure") is not None or tc.find("error") is not None:
-            lines.append(case_line(title, True, "", ""))
-        elif tc.find("skipped") is not None:
-            lines.append(f"⏭ {slack_escape(display_name(title))}")
+        if tc.find("skipped") is not None:
+            rows.append(case_row(title, False, "", "", skipped=True))
         else:
-            lines.append(case_line(title, False, "", ""))
-    return lines
+            failed = tc.find("failure") is not None or tc.find("error") is not None
+            rows.append(case_row(title, failed, "", ""))
+    return rows
 
 
 def walk_specs(node: dict, specs: list[dict]) -> None:
@@ -88,30 +82,30 @@ def walk_specs(node: dict, specs: list[dict]) -> None:
             walk_specs(child, specs)
 
 
-def cases_from_results(report: dict, report_url: str) -> list[str]:
+def cases_from_results(report: dict, report_url: str) -> list[dict]:
     specs: list[dict] = []
     for suite in report.get("suites") or []:
         if isinstance(suite, dict):
             walk_specs(suite, specs)
-    lines: list[str] = []
+    rows: list[dict] = []
     for spec in specs:
         tests = spec.get("tests") or []
         status = ""
         if tests and isinstance(tests[0], dict):
             status = str(tests[0].get("status") or "")
         if status == "skipped":
-            lines.append(f"⏭ {slack_escape(display_name(spec.get('title') or 'unknown'))}")
+            rows.append(case_row(str(spec.get("title") or "unknown"), False, "", "", skipped=True))
             continue
         failed = (not spec.get("ok")) or status in FAILED_STATUSES
-        lines.append(
-            case_line(
+        rows.append(
+            case_row(
                 str(spec.get("title") or "unknown"),
                 failed,
                 str(spec.get("id") or ""),
                 report_url,
             )
         )
-    return lines
+    return rows
 
 
 def main() -> None:
@@ -124,8 +118,9 @@ def main() -> None:
         "duration": "n/a",
         "failed": "",
         "cases": "",
+        "rows": [],
     }
-    case_lines: list[str] = []
+    case_rows: list[dict] = []
     try:
         root = ET.parse(junit_path).getroot()
         suites = list(root.iter("testsuite"))
@@ -143,7 +138,7 @@ def main() -> None:
         )
         out["bar"] = pass_rate_bar(passed, tests)
         out["duration"] = f"{seconds:.1f}s" if seconds else "n/a"
-        case_lines = cases_from_junit(root)
+        case_rows = cases_from_junit(root)
     except Exception:
         pass
 
@@ -153,12 +148,11 @@ def main() -> None:
                 report = json.load(handle)
             linked = cases_from_results(report, report_url)
             if linked:
-                case_lines = linked
+                case_rows = linked
         except Exception:
             pass
 
-    if case_lines:
-        out["cases"] = fit_cases(case_lines)
+    out["rows"] = cap_rows(case_rows, report_url)
     print(json.dumps(out))
 
 
