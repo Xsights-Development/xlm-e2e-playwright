@@ -55,7 +55,7 @@ esac
 
 JUNIT_JSON='{"summary":"n/a","bar":"n/a","duration":"n/a","failed":"","cases":""}'
 if [ -f reports/junit.xml ]; then
-  JUNIT_JSON=$(python3 scripts/junit-slack-summary.py reports/junit.xml 2>/dev/null || echo "$JUNIT_JSON")
+  JUNIT_JSON=$(python3 scripts/junit-slack-summary.py reports/junit.xml reports/results.json "${REPORT_URL:-}" 2>/dev/null || echo "$JUNIT_JSON")
 fi
 JUNIT_SUMMARY=$(echo "$JUNIT_JSON" | jq -r '.summary')
 PASS_RATE_BAR=$(echo "$JUNIT_JSON" | jq -r '.bar')
@@ -107,7 +107,7 @@ PAYLOAD=$(jq -n \
             [{title: "Reports", value: ($report_link + "\n_" + $report_hint + "_"), short: false}]
           else [] end
         + if ($cases | length) > 0 then
-            [{title: "Test cases", value: ("```\n" + $cases + "\n```"), short: false}]
+            [{title: "Test cases", value: $cases, short: false}]
           else [] end
       ),
       footer: $footer,
