@@ -1,3 +1,4 @@
+import { currentTarget } from '@/configs/targets.js';
 import { test, expect } from '@/fixtures/auth.fixture.js';
 import { CHART_WEEK_KEYS } from '@/configs/chart-weeks.js';
 import { FarmPage } from '@/pages/farm.page.js';
@@ -7,8 +8,7 @@ import {
   getFarmTagsDeployedThisWeekFromCube,
 } from '@/lib/cube/dashboard/oracles.js';
 
-const farmKeyFromEnv = () =>
-  process.env.APP_FARM_IDENTIFIER ?? process.env.APP_FARM ?? '';
+const farmKeyFromTarget = () => currentTarget().farmIdentifier;
 
 test.describe('Farm Dashboard', { tag: '@farm' }, () => {
   // One login per worker via authenticatedDashboardSession. Run: npm run test -- farm.spec --workers=1
@@ -24,7 +24,7 @@ test.describe('Farm Dashboard', { tag: '@farm' }, () => {
       await farmPage.verifyOnDashboard();
       await farmPage.waitForFarmDetailsPanel();
 
-      const farmKey = (await farmPage.getFarmIdFromDom()) ?? farmKeyFromEnv();
+      const farmKey = (await farmPage.getFarmIdFromDom()) ?? farmKeyFromTarget();
       const actual = await farmPage.getFarmName();
       const expected = await adminApi.getFarmNameByIdentifier(farmKey);
 

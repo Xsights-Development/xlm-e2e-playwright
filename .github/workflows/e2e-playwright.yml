@@ -136,13 +136,7 @@ jobs:
           E2E_TARGET: ${{ github.event.inputs.target }}
           # Locale JSON root for i18n (sibling checkout path)
           DASHBOARD_ROOT: ${{ github.workspace }}/xahwm-dashboard
-          # Repository variables (Settings → Actions → Variables)
-          APP_TENANT_IDENTIFIER: ${{ vars.APP_TENANT_IDENTIFIER }}
-          APP_FARM_IDENTIFIER: ${{ vars.APP_FARM_IDENTIFIER }}
-          APP_LOCATION_TYPE: ${{ vars.APP_LOCATION_TYPE }}
-          APP_LOCATION_IDENTIFIER: ${{ vars.APP_LOCATION_IDENTIFIER }}
-          APP_API_FARM_IDENTIFIER: ${{ vars.APP_API_FARM_IDENTIFIER }}
-          APP_TIMEZONE: ${{ vars.APP_TIMEZONE }}
+          # Tenant, farm, location, and timezone come from configs/targets.json via E2E_TARGET.
           # Repository secrets (Settings → Actions → Secrets)
           APP_USER: ${{ vars.APP_USER }}
           APP_PASS: ${{ secrets.APP_PASS }}

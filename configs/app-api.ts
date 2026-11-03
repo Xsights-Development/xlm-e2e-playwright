@@ -5,7 +5,8 @@
 
 import { currentTarget } from '@/configs/targets.js';
 
-const baseUrl = currentTarget().apiBaseUrl.replace(/\/+$/, '');
+const target = currentTarget();
+const baseUrl = target.apiBaseUrl.replace(/\/+$/, '');
 
 /** Path templates (append to API_BASE_URL). */
 export const APP_API_PATHS = {
@@ -59,17 +60,13 @@ export const APP_API = {
   baseUrl,
   paths: APP_API_PATHS,
   headers: APP_API_HEADERS,
-  tenantIdentifier:
-    process.env.APP_TENANT_IDENTIFIER ?? process.env.APP_TENANT ?? '',
-  /** API header value (e.g. GROOVE). Override when APP_FARM_IDENTIFIER is a UI label. */
-  farmIdentifier:
-    process.env.APP_API_FARM_IDENTIFIER ??
-    process.env.APP_FARM_IDENTIFIER ??
-    process.env.APP_FARM ??
-    '',
-  locationIdentifier: process.env.APP_LOCATION_IDENTIFIER ?? '',
-  /** Optional; Cube queries use tenant timezone when set */
-  timezone: process.env.APP_TIMEZONE ?? 'Australia/Perth',
+  tenantIdentifier: target.tenantIdentifier,
+  /** API header value. Uses apiFarmIdentifier when farmIdentifier is a UI label. */
+  farmIdentifier: target.apiFarmIdentifier || target.farmIdentifier,
+  locationType: target.locationType,
+  locationIdentifier: target.locationIdentifier,
+  /** Cube queries use the farm timezone when the payload has none. */
+  timezone: target.timezone || 'Australia/Perth',
   get loginUrl(): string {
     return `${this.baseUrl}${APP_API_PATHS.auth.login}`;
   },

@@ -3,6 +3,7 @@ import { LoginPage } from '@/pages/login.page.js';
 import { FarmPage } from '@/pages/farm.page.js';
 import { OverviewPage } from '@/pages/overview.page.js';
 import { I18nPage } from '@/pages/i18n.page.js';
+import { currentTarget } from '@/configs/targets.js';
 import { ROUTES } from '@/configs/routes.js';
 import { loadLocaleFlat, t, toMomentLocale } from '@/lib/i18n/locales.js';
 import moment from 'moment-timezone';
@@ -11,13 +12,13 @@ import '@/lib/i18n/moment-locales.js';
 const THIS_WEEK_KEY = 'container.FarmViewPage.txtThisWeek';
 const WEEK_KEY = 'container.FarmViewPage.txtWeek';
 
+const target = currentTarget();
 const testUser = process.env.APP_USER ?? 'user@example.com';
 const testPass = process.env.APP_PASS ?? 'password123';
-const testTenant =
-  process.env.APP_TENANT_IDENTIFIER ?? process.env.APP_TENANT ?? '';
-const testFarm = process.env.APP_FARM_IDENTIFIER ?? process.env.APP_FARM ?? '';
-const testLocationType = process.env.APP_LOCATION_TYPE ?? undefined;
-const testLocationIdentifier = process.env.APP_LOCATION_IDENTIFIER ?? undefined;
+const testTenant = target.tenantIdentifier;
+const testFarm = target.farmIdentifier;
+const testLocationType = target.locationType || undefined;
+const testLocationIdentifier = target.locationIdentifier || undefined;
 
 async function loginAgain(page: import('@playwright/test').Page): Promise<void> {
   const loginPage = new LoginPage(page);

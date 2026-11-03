@@ -3,6 +3,8 @@
  */
 import { AdminApiClient } from '@/lib/api/admin-api.client.js';
 import { ADMIN_API } from '@/configs/admin-api.js';
+import { APP_API } from '@/configs/app-api.js';
+import { currentTarget } from '@/configs/targets.js';
 import { CUBE_COMPONENT_KEYS } from '@/configs/cube-api.js';
 import { buildFarmTagsDeployedQuery } from '@/configs/cube-queries.js';
 import {
@@ -26,7 +28,7 @@ export async function probeAdmin(): Promise<void> {
   await client.login();
   console.log('[Admin API] POST', ADMIN_API.loginUrl, '-> Login OK');
 
-  const locationIdentifier = process.env.APP_LOCATION_IDENTIFIER ?? '';
+  const locationIdentifier = APP_API.locationIdentifier;
   const bodyParams: Record<string, string | number> = {
     page: 1,
     perPage: 10,
@@ -43,7 +45,7 @@ export async function probeAdmin(): Promise<void> {
 }
 
 export async function probeFarmAdmin(): Promise<void> {
-  const farmKey = process.env.APP_FARM_IDENTIFIER ?? process.env.APP_FARM ?? '6';
+  const farmKey = currentTarget().farmIdentifier;
   const managerId = process.env.DEBUG_MANAGER_ID ?? '25';
 
   logAdminEnv();

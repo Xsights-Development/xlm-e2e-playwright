@@ -204,7 +204,7 @@ export class AppApiClient {
     const key = (identifier ?? APP_API.locationIdentifier).trim();
     if (!key) {
       throw new Error(
-        'App API: location identifier is empty (APP_LOCATION_IDENTIFIER)',
+        'App API: location identifier is empty (configs/targets.json locationIdentifier)',
       );
     }
 

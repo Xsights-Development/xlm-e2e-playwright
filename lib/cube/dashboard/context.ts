@@ -27,13 +27,11 @@ function resolveTimezone(farmDetail: Record<string, unknown>): string {
 export async function loadFarmCubeContext(appApi: AppApiClient): Promise<FarmCubeContext> {
   const farmDetail = await appApi.getFarmCurrent();
   const farmIdentifier =
-    String(farmDetail.identifier ?? '').trim() ||
-    process.env.APP_API_FARM_IDENTIFIER ||
-    APP_API.farmIdentifier;
+    String(farmDetail.identifier ?? '').trim() || APP_API.farmIdentifier;
 
   if (!farmIdentifier) {
     throw new Error(
-      'Farm Cube context: farm.identifier is empty (GET /farms/current or APP_API_FARM_IDENTIFIER)',
+      'Farm Cube context: farm.identifier is empty (GET /farms/current or configs/targets.json apiFarmIdentifier)',
     );
   }
 

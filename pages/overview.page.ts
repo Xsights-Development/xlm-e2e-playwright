@@ -165,7 +165,7 @@ export class OverviewPage extends BasePage {
    * Expand a category (barn group) in the Barns menu (FarmNavigation) on the right.
    * Uses data-location-type (i18n-safe); normalizes category to lowercase to match backend type (e.g. "General" → "general").
    * If the category section is not visible (e.g. tenant has no rooms of that type), returns without throwing.
-   * @param category - e.g. APP_LOCATION_TYPE ("General" or "general", "nursery_room")
+   * @param category - locationType from configs/targets.json ("General", "general", "nursery_room")
    */
   async expandBarnsCategory(category: string): Promise<void> {
     const locationType = category.toLowerCase().trim();

@@ -51,16 +51,16 @@ CRA embed at `npm start` / `npm run build`. See webapp `.sample.env`. Changing `
 
 ### Playwright repo (runtime)
 
-| Webapp | Playwright `.env` | Notes |
-|--------|-------------------|--------|
-| `REACT_APP_ROOT_API` | `API_BASE_URL` | Same host/path the UI calls (e.g. `https://api.dev.xiot.com.au/api/202312`) |
-| `REACT_APP_CUBE_API` | `CUBE_API_URL` | Same Cube deploy as UI |
-| — | `APP_URL` | Dashboard under test (`http://localhost:3000` or UAT) |
-| — | `APP_USER` / `APP_PASS` | Same credentials as UI login |
-| — | `APP_TENANT_IDENTIFIER` | `X-Tenant-Identifier` |
-| — | `APP_API_FARM_IDENTIFIER` | `X-Farm-Identifier` when `APP_FARM_IDENTIFIER` is a display label |
-| — | `APP_LOCATION_IDENTIFIER` | Room `/stats/room-tags` scope |
-| — | `APP_TIMEZONE` | Cube `timezone` (default `Australia/Perth`) |
+| Webapp | Playwright | Notes |
+|--------|------------|--------|
+| `REACT_APP_ROOT_API` | `configs/targets.json` `apiBaseUrl` | Same host/path the UI calls |
+| `REACT_APP_CUBE_API` | `configs/targets.json` `cubeApiUrl` | Same Cube deploy as UI |
+| — | `configs/targets.json` `appUrl` | Dashboard under test. Switch with `E2E_TARGET` |
+| — | `.env` `APP_USER` / `APP_PASS` | Same credentials as UI login |
+| — | `tenantIdentifier` | `X-Tenant-Identifier` |
+| — | `apiFarmIdentifier` | `X-Farm-Identifier` when `farmIdentifier` is a display label |
+| — | `locationIdentifier` | Room `/stats/room-tags` scope |
+| — | `timezone` | Cube `timezone` when the farm payload has none |
 
 Clients: `lib/api/`, `lib/cube/dashboard/oracles.ts`, `configs/*` — fixtures `appApi`, `cubeApi`. Probes: `npm run probe -- health`.
 

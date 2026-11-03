@@ -5,7 +5,7 @@ This document describes configuration, auth flow, and selectors so Cursor or a n
 ## 1. Purpose
 
 - **Project:** `xlm-e2e-playwright` – Playwright E2E test suite for the XLM app (xahwm-dashboard).
-- **Running tests:** The app must be running at `APP_URL` (e.g. `http://localhost:3000`). Credentials and location come from `.env`.
+- **Running tests:** The app URL comes from `E2E_TARGET` in `configs/targets.json`. Credentials come from `.env`.
 
 ## 2. Environment variables (`.env`)
 
@@ -13,12 +13,8 @@ Copy `.env.example` to `.env` and set at least:
 
 | Variable | Purpose |
 |----------|---------|
-| `E2E_TARGET` | `dev` or `staging`. App URL, REST, Cube, Admin host, and locale branch come from `configs/targets.json` |
+| `E2E_TARGET` | `dev` or `staging`. App URL, REST, Cube, Admin host, locale branch, tenant, farm, location, and timezone come from `configs/targets.json` |
 | `APP_USER`, `APP_PASS` | Login email and password |
-| `APP_TENANT_IDENTIFIER`, `APP_FARM_IDENTIFIER` | Tenant and farm identifiers to select after login (fallback: `APP_TENANT`, `APP_FARM`) |
-| `APP_LOCATION_TYPE` | Barn group type (e.g. `General` or `general`); selected via `data-location-type` (i18n-safe). |
-| `APP_LOCATION_IDENTIFIER` | Room identifier for selection via `data-location-identifier` (i18n-safe). |
-| `APP_API_FARM_IDENTIFIER` | Optional API farm header when `APP_FARM_IDENTIFIER` is a UI display name. |
 | `ADMIN_USER`, `ADMIN_PASS` | Admin API credentials (`@business` QC). The Admin host comes from the target. |
 
 **API / Cube map:** [docs/e2e/api-and-cube.md](./e2e/api-and-cube.md).
@@ -29,7 +25,7 @@ For login selectors and flows, see **[pages/login.page.ts](../pages/login.page.t
 
 1. **Login:** `/sign-in` → enter email/password → select tenant → Next → select farm → Go to Dashboard → `/dashboard`.
 2. **Dashboard:** The **Barns** panel (FarmNavigation) is on the right; categories (e.g. General Barns) can be expanded/collapsed.
-3. **Reaching Overview:** Expand the category per `APP_LOCATION_TYPE` (via `data-location-type`), click the room per `APP_LOCATION_IDENTIFIER` → `/overview`.
+3. **Reaching Overview:** Expand the category per `locationType` (via `data-location-type`), click the room per `locationIdentifier` → `/overview`. Both values come from the active target.
 
 **Fixture `authenticatedDashboard`:** Session cleared, then login + tenant + farm; user on dashboard. Use for tests that need a logged-in user on dashboard.  
 **Fixture `authenticatedOnOverview`:** Session cleared, then login + tenant + farm + dashboard + location selected from Barns; user on Overview. Use for tests that need Overview context.  
