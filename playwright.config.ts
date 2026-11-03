@@ -1,5 +1,6 @@
 import { defineConfig, devices, ViewportSize } from '@playwright/test';
 import 'dotenv/config';
+import { currentTarget } from './configs/targets.js';
 
 const isHeaded = process.argv.includes('--headed');
 
@@ -25,7 +26,7 @@ export default defineConfig({
   ],
 
   use: {
-    baseURL: process.env.APP_URL || 'http://localhost:3000',
+    baseURL: currentTarget().appUrl,
     headless: !isHeaded,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',

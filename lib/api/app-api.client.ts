@@ -38,7 +38,7 @@ export class AppApiClient {
    */
   async login(): Promise<void> {
     if (!this.baseUrl) {
-      throw new Error('App API: API_BASE_URL is not set in .env');
+      throw new Error('App API: E2E_TARGET has no REST URL in configs/targets.json');
     }
     if (!this.username || !this.password) {
       throw new Error('App API: APP_USER and APP_PASS are required');
@@ -75,7 +75,7 @@ export class AppApiClient {
 
     if (!res.ok) {
       throw new Error(
-        `App API login failed (${res.status}): ${text.slice(0, 300)}. Check API_BASE_URL, APP_USER, APP_PASS.`,
+        `App API login failed (${res.status}): ${text.slice(0, 300)}. Check E2E_TARGET, APP_USER, APP_PASS.`,
       );
     }
 

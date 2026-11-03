@@ -3,7 +3,9 @@
  * @see docs/e2e/api-and-cube.md
  */
 
-const baseUrl = (process.env.API_BASE_URL ?? '').trim().replace(/\/+$/, '');
+import { currentTarget } from '@/configs/targets.js';
+
+const baseUrl = currentTarget().apiBaseUrl.replace(/\/+$/, '');
 
 /** Path templates (append to API_BASE_URL). */
 export const APP_API_PATHS = {

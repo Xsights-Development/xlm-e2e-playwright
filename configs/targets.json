@@ -1,0 +1,16 @@
+{
+  "dev": {
+    "appUrl": "https://dev.xsightslm.com",
+    "apiBaseUrl": "https://api.dev.xiot.com.au/api/202312",
+    "cubeApiUrl": "https://cube.dev.xiot.com.au/cubejs-api/v1",
+    "adminUrl": "https://api.dev.xiot.com.au",
+    "dashboardRef": "revised-ui-version"
+  },
+  "staging": {
+    "appUrl": "https://demo.xsightslm.com",
+    "apiBaseUrl": "https://api.staging.xiot.com.au/api/202312",
+    "cubeApiUrl": "https://cube.staging.xiot.com.au/cubejs-api/v1",
+    "adminUrl": "https://api.staging.xiot.com.au",
+    "dashboardRef": "staging"
+  }
+}

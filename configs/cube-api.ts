@@ -4,7 +4,9 @@
  * @see docs/e2e/api-and-cube.md
  */
 
-const baseUrl = (process.env.CUBE_API_URL ?? '').trim().replace(/\/+$/, '');
+import { currentTarget } from '@/configs/targets.js';
+
+const baseUrl = currentTarget().cubeApiUrl.replace(/\/+$/, '');
 
 /** Last argument to `useShowcaseCubeData(..., componentKey)` in dashboard repo. */
 export const CUBE_COMPONENT_KEYS = {

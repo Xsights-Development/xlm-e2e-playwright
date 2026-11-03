@@ -9,20 +9,16 @@ Workflow: [`.github/workflows/e2e-playwright.yml`](../.github/workflows/e2e-play
 
 **Settings** → **Secrets and variables** → **Actions**. Names must match exactly.
 
-The workflow maps **`vars.*`** → URLs/identifiers and **`secrets.*`** → credentials (see `.github/workflows/e2e-playwright.yml`).
+The workflow maps **`vars.*`** → tenant, farm, and location, and **`secrets.*`** → credentials. App URL and API hosts come from workflow input **target** via `configs/targets.json`.
 
 ### Repository variables (required)
 
 | Variable name | Same as local `.env` | Example / notes |
 |---------------|----------------------|-----------------|
-| `APP_URL` | `APP_URL` | `https://dev.xsightslm.com` — deployed dashboard |
 | `APP_TENANT_IDENTIFIER` | `APP_TENANT_IDENTIFIER` | Tenant after login |
 | `APP_FARM_IDENTIFIER` | `APP_FARM_IDENTIFIER` | Farm after login |
 | `APP_LOCATION_TYPE` | `APP_LOCATION_TYPE` | Barn category (Overview tests) |
 | `APP_LOCATION_IDENTIFIER` | `APP_LOCATION_IDENTIFIER` | Room id (Overview tests) |
-| `API_BASE_URL` | `API_BASE_URL` | e.g. `https://api.dev.xiot.com.au/api/202312` |
-| `CUBE_API_URL` | `CUBE_API_URL` | e.g. `https://cube.dev.xiot.com.au/cubejs-api/v1` |
-| `ADMIN_URL` | `ADMIN_URL` | Admin API base (no trailing slash) |
 
 ### Repository variables (optional)
 
@@ -91,7 +87,7 @@ curl -X POST -H 'Content-type: application/json' \
 | `project` | `farm` / `overview` / `all` (farm+overview panels); `i18n` = languages only |
 | `languages` | `on` / `off` — also add i18n when running farm/overview/all. Slack `/xlm-test-overview` uses `project=i18n` directly. |
 | `grep` | Passed to Playwright `--grep`; leave empty for full project |
-| `dashboard_ref` | `auto` (default) when languages run: map from `APP_URL`, else fallback `revised-ui-version` |
+| `target` | `dev` (default) or `staging`. Sets app URL, APIs, and locale branch from `configs/targets.json` |
 | `xlm_slack_notify` | `on` (default) / `off` — maps to `XLM_SLACK_NOTIFY`; skip result webhook when `off` |
 
 Examples:
@@ -103,7 +99,7 @@ Examples:
 
 ```bash
 gh workflow run e2e-playwright.yml --ref <e2e-branch> \
-  -f project=i18n -f languages=on -f dashboard_ref=auto -f xlm_slack_notify=off
+  -f project=i18n -f languages=on -f target=dev -f xlm_slack_notify=off
 ```
 
 Worker (fixed URLs):
@@ -130,7 +126,7 @@ For i18n locally, set `DASHBOARD_CHECKOUT_TOKEN` in `.env`. The suite sparse-che
 
 | Issue | Check |
 |-------|--------|
-| `APP_URL is empty` | Add **variable** `APP_URL` (Variables tab, not Secrets) |
+| `APP_URL is empty` | Workflow input **target** must be `dev` or `staging` so `configs/targets.json` can fill the URL |
 | Login / tenant failures | `vars` + `secrets` match UAT; app reachable from GitHub runners |
 | Cube / contract failures | `API_BASE_URL`, `CUBE_API_URL`, optional `APP_API_FARM_IDENTIFIER` |
 | Admin / business failures | `ADMIN_*` secrets; Admin API allows CI runner IPs if restricted |

@@ -17,7 +17,7 @@ export class CubeApiClient {
   /** Login via App API, then issue Cube token (`type: backend` — same as layout bootstrap). */
   static async fromAppApi(appApi: AppApiClient): Promise<CubeApiClient> {
     if (!CUBE_API.baseUrl) {
-      throw new Error('Cube API: CUBE_API_URL is not set in .env');
+      throw new Error('Cube API: E2E_TARGET has no Cube URL in configs/targets.json');
     }
     const token = await appApi.getCubeToken('backend');
     return new CubeApiClient(CUBE_API.baseUrl, token);

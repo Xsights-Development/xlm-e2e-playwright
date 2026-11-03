@@ -13,15 +13,13 @@ Copy `.env.example` to `.env` and set at least:
 
 | Variable | Purpose |
 |----------|---------|
-| `APP_URL` | Base URL of the app (e.g. `http://localhost:3000`) |
+| `E2E_TARGET` | `dev` or `staging`. App URL, REST, Cube, Admin host, and locale branch come from `configs/targets.json` |
 | `APP_USER`, `APP_PASS` | Login email and password |
 | `APP_TENANT_IDENTIFIER`, `APP_FARM_IDENTIFIER` | Tenant and farm identifiers to select after login (fallback: `APP_TENANT`, `APP_FARM`) |
 | `APP_LOCATION_TYPE` | Barn group type (e.g. `General` or `general`); selected via `data-location-type` (i18n-safe). |
 | `APP_LOCATION_IDENTIFIER` | Room identifier for selection via `data-location-identifier` (i18n-safe). |
-| `API_BASE_URL` | Dashboard REST API (= webapp `REACT_APP_ROOT_API`). Fixture `appApi` — `@contract` oracles (e.g. `/stats/tags`). |
-| `CUBE_API_URL` | Cube.js API (= webapp `REACT_APP_CUBE_API`). Fixture `cubeApi` (token via `appApi`). |
 | `APP_API_FARM_IDENTIFIER` | Optional API farm header when `APP_FARM_IDENTIFIER` is a UI display name. |
-| `ADMIN_URL`, `ADMIN_USER`, `ADMIN_PASS` | Admin API (`@business` QC). Fixture `adminApi`; client `lib/api/admin-api.client.ts`. |
+| `ADMIN_USER`, `ADMIN_PASS` | Admin API credentials (`@business` QC). The Admin host comes from the target. |
 
 **API / Cube map:** [docs/e2e/api-and-cube.md](./e2e/api-and-cube.md).
 

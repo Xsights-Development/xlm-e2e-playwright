@@ -1,23 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { currentTarget } from '@/configs/targets.js';
 import { getDashboardLocalesDir, getDashboardRoot } from '@/lib/i18n/locales.js';
 
 const REPO = 'Xsights-Development/xlm-dashboard';
 const ORIGIN = `https://github.com/${REPO}.git`;
 
-/** Same host map as .github/workflows/e2e-playwright.yml (dashboard_ref=auto). */
-export function resolveDashboardRef(
-  appUrl = process.env.APP_URL ?? '',
-  explicit = process.env.DASHBOARD_REF ?? 'auto',
-): string {
-  const input = explicit.trim() || 'auto';
-  if (input !== 'auto') return input;
-
-  const host = appUrl.replace(/^https?:\/\//, '').split('/')[0].toLowerCase();
-  if (host.includes('dev.xsightslm.com')) return 'revised-ui-version';
-  if (host.includes('demo.xsightslm.com')) return 'staging';
-  return 'revised-ui-version';
+/** Locale branch for the active E2E_TARGET. Not read from the environment. */
+export function resolveDashboardRef(): string {
+  return currentTarget().dashboardRef;
 }
 
 /**
@@ -60,7 +52,7 @@ export function ensureDashboardLocales(): void {
   const enJson = path.join(dest, 'src/locales/lang/en.json');
   if (!fs.existsSync(enJson)) {
     throw new Error(
-      `Checkout of ${REPO}@${ref} did not include ${enJson}. Check DASHBOARD_REF / APP_URL.`,
+      `Checkout of ${REPO}@${ref} did not include ${enJson}. Check E2E_TARGET.`,
     );
   }
   console.log(`Dashboard locales: ${REPO}@${ref} → ${dest}`);

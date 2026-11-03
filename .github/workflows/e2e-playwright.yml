@@ -27,15 +27,14 @@ on:
         description: Optional --grep (e.g. @contract, @health, @i18n)
         required: false
         default: ''
-      dashboard_ref:
-        description: Locale JSON ref — auto maps from APP_URL (dev→revised-ui-version, demo→staging)
+      target:
+        description: dev or staging — URLs, APIs, and locale branch come from configs/targets.json
         required: true
-        default: auto
+        default: dev
         type: choice
         options:
-          - auto                 # from vars.APP_URL host
-          - revised-ui-version   # force (dev/online)
-          - staging              # force (demo/UAT)
+          - dev
+          - staging
       xlm_slack_notify:
         description: Post run summary to Slack (XLM_SLACK_NOTIFY)
         required: true
@@ -62,39 +61,33 @@ jobs:
       - name: Checkout e2e
         uses: actions/checkout@v4
 
-      - name: Resolve dashboard_ref from APP_URL
-        id: dashboard_ref
-        if: >-
-          github.event.inputs.languages == 'on' ||
-          github.event.inputs.project == 'i18n'
+      - name: Resolve target
+        id: target
         env:
-          APP_URL: ${{ vars.APP_URL }}
-          INPUT_REF: ${{ github.event.inputs.dashboard_ref }}
+          E2E_TARGET: ${{ github.event.inputs.target }}
         run: |
           set -euo pipefail
-          host=$(echo "${APP_URL:-}" | sed -E 's|^https?://([^/]+).*|\1|' | tr '[:upper:]' '[:lower:]')
-
-          map_from_app_url() {
-            # Host is or contains these domains (e.g. https://dev.xsightslm.com).
-            case "$host" in
-              *dev.xsightslm.com*) echo "revised-ui-version" ;;
-              *demo.xsightslm.com*) echo "staging" ;;
-              *) echo "" ;;
-            esac
-          }
-
-          if [ "${INPUT_REF}" = "auto" ]; then
-            REF="$(map_from_app_url)"
-            if [ -z "$REF" ]; then
-              REF="revised-ui-version"
-              echo "::warning::APP_URL host '${host}' did not match dev/demo.xsightslm.com — fallback dashboard_ref=${REF}"
-            fi
-          else
-            REF="${INPUT_REF}"
-          fi
-
-          echo "ref=${REF}" >> "$GITHUB_OUTPUT"
-          echo "Resolved dashboard_ref=${REF} (input=${INPUT_REF}, APP_URL host=${host})"
+          node -e '
+            const fs = require("node:fs");
+            const targets = require("./configs/targets.json");
+            const name = String(process.env.E2E_TARGET || "dev").trim().toLowerCase();
+            const target = targets[name];
+            if (!target) {
+              console.error("Unknown target \"" + name + "\". Use dev or staging.");
+              process.exit(1);
+            }
+            const fields = {
+              app_url: target.appUrl,
+              api_base_url: target.apiBaseUrl,
+              cube_api_url: target.cubeApiUrl,
+              admin_url: target.adminUrl,
+              ref: target.dashboardRef,
+            };
+            for (const [key, value] of Object.entries(fields)) {
+              fs.appendFileSync(process.env.GITHUB_OUTPUT, key + "=" + value + "\n");
+            }
+            console.log("Target " + name + ": " + target.appUrl + " locales@" + target.dashboardRef);
+          '
 
       # Locale JSON for i18n specs (lib/i18n/locales.ts → DASHBOARD_ROOT).
       # Private sibling repo: set secret DASHBOARD_CHECKOUT_TOKEN (PAT with contents:read).
@@ -105,7 +98,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Xsights-Development/xlm-dashboard
-          ref: ${{ steps.dashboard_ref.outputs.ref }}
+          ref: ${{ steps.target.outputs.ref }}
           path: xahwm-dashboard
           token: ${{ secrets.DASHBOARD_CHECKOUT_TOKEN || github.token }}
           sparse-checkout: |
@@ -140,17 +133,14 @@ jobs:
       - name: Run E2E tests
         env:
           CI: true
+          E2E_TARGET: ${{ github.event.inputs.target }}
           # Locale JSON root for i18n (sibling checkout path)
           DASHBOARD_ROOT: ${{ github.workspace }}/xahwm-dashboard
           # Repository variables (Settings → Actions → Variables)
-          APP_URL: ${{ vars.APP_URL }}
           APP_TENANT_IDENTIFIER: ${{ vars.APP_TENANT_IDENTIFIER }}
           APP_FARM_IDENTIFIER: ${{ vars.APP_FARM_IDENTIFIER }}
           APP_LOCATION_TYPE: ${{ vars.APP_LOCATION_TYPE }}
           APP_LOCATION_IDENTIFIER: ${{ vars.APP_LOCATION_IDENTIFIER }}
-          API_BASE_URL: ${{ vars.API_BASE_URL }}
-          CUBE_API_URL: ${{ vars.CUBE_API_URL }}
-          ADMIN_URL: ${{ vars.ADMIN_URL }}
           APP_API_FARM_IDENTIFIER: ${{ vars.APP_API_FARM_IDENTIFIER }}
           APP_TIMEZONE: ${{ vars.APP_TIMEZONE }}
           # Repository secrets (Settings → Actions → Secrets)
@@ -171,8 +161,8 @@ jobs:
           STAGING_DB_READONLY_PASS: ${{ secrets.STAGING_DB_READONLY_PASS }}
         run: |
           set -euo pipefail
-          if [ -z "${APP_URL}" ]; then
-            echo "::error::APP_URL is empty — add repository variable APP_URL (not secret)"
+          if [ "${E2E_TARGET}" != "dev" ] && [ "${E2E_TARGET}" != "staging" ]; then
+            echo "::error::E2E_TARGET must be dev or staging (got '${E2E_TARGET}')"
             exit 1
           fi
 
@@ -191,7 +181,7 @@ jobs:
               echo "::error::Missing $LOCALE_SAMPLE — checkout dashboard locales failed or dashboard_ref is wrong. For a private dashboard repo, add secret DASHBOARD_CHECKOUT_TOKEN."
               exit 1
             fi
-            echo "DASHBOARD_ROOT=$DASHBOARD_ROOT (dashboard_ref=${{ steps.dashboard_ref.outputs.ref }})"
+            echo "DASHBOARD_ROOT=$DASHBOARD_ROOT (dashboard_ref=${{ steps.target.outputs.ref }})"
           fi
 
           # --- Open SSM port-forward to RDS in THIS shell so it lives for the test run ---
@@ -215,7 +205,7 @@ jobs:
             echo "::error::SSM tunnel did not open on localhost:5432"; cat /tmp/ssm-tunnel.log; exit 1
           fi
           exec 3>&- 3<&- 2>/dev/null || true
-          echo "Using APP_URL host: $(echo "$APP_URL" | sed -E 's|^(https?://[^/]+).*|\1|')"
+          echo "Using E2E_TARGET=${E2E_TARGET} (${{ steps.target.outputs.app_url }})"
           CMD=(npx playwright test)
 
           # Select Playwright projects: base suite + optional languages (i18n).
@@ -297,5 +287,5 @@ jobs:
           RUN_NUMBER: ${{ github.run_number }}
           GIT_REPO: ${{ github.repository }}
           WORKFLOW_NAME: ${{ github.workflow }}
-          APP_URL_HOST: ${{ vars.APP_URL }}
+          APP_URL_HOST: ${{ steps.target.outputs.app_url }}
         run: bash scripts/slack-e2e-notify.sh

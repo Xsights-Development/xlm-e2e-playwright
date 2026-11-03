@@ -43,7 +43,7 @@ export class AdminApiClient {
    */
   async login(): Promise<void> {
     if (!this.baseUrl) {
-      throw new Error('Admin API: ADMIN_URL is not set in .env');
+      throw new Error('Admin API: E2E_TARGET has no Admin URL in configs/targets.json');
     }
     const url = ADMIN_API.loginUrl;
     const res = await fetch(url, {
@@ -57,12 +57,12 @@ export class AdminApiClient {
       body = (text ? JSON.parse(text) : {}) as AdminLoginResponse;
     } catch {
       throw new Error(
-        `Admin API login returned invalid JSON (${res.status}). URL: ${url}. Body: ${text.slice(0, 200)}. Check ADMIN_URL in .env.`,
+        `Admin API login returned invalid JSON (${res.status}). URL: ${url}. Body: ${text.slice(0, 200)}. Check E2E_TARGET.`,
       );
     }
     if (!res.ok) {
       throw new Error(
-        `Admin API login failed (${res.status}): ${body.msg ?? res.statusText}. URL: ${url}. Check ADMIN_URL in .env (use base only, e.g. https://api.staging.xiot.com.au).`,
+        `Admin API login failed (${res.status}): ${body.msg ?? res.statusText}. URL: ${url}. Check E2E_TARGET.`,
       );
     }
     if (body.code !== 0 || body.status !== 0) {
@@ -96,7 +96,7 @@ export class AdminApiClient {
     params?: Record<string, string | number>,
   ): Promise<T> {
     if (!this.baseUrl) {
-      throw new Error('Admin API: ADMIN_URL is not set in .env');
+      throw new Error('Admin API: E2E_TARGET has no Admin URL in configs/targets.json');
     }
     const url = new URL(path.startsWith('http') ? path : `${this.baseUrl}${path}`);
     if (params) {
@@ -126,7 +126,7 @@ export class AdminApiClient {
    */
   async post<T = unknown>(path: string, body?: Record<string, unknown>): Promise<T> {
     if (!this.baseUrl) {
-      throw new Error('Admin API: ADMIN_URL is not set in .env');
+      throw new Error('Admin API: E2E_TARGET has no Admin URL in configs/targets.json');
     }
     const url = path.startsWith('http') ? path : `${this.baseUrl}${path}`;
     const res = await fetch(url, {

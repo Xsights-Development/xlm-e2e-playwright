@@ -78,7 +78,7 @@ function dispatchWorkflow(env, { project, languages }) {
         project,
         grep: "",
         languages,
-        dashboard_ref: "auto",
+        target: String(env.E2E_TARGET || "dev").trim().toLowerCase() === "staging" ? "staging" : "dev",
         // Workflow input name; maps to XLM_SLACK_NOTIFY in the Notify Slack step.
         xlm_slack_notify: slackNotify === "off" ? "off" : "on",
     };

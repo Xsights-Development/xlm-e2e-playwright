@@ -7,7 +7,9 @@ import { AppApiClient } from '@/lib/api/app-api.client.js';
 import { CubeApiClient } from '@/lib/api/cube-api.client.js';
 import { ROUTES } from '@/configs/routes.js';
 
-const baseURL = process.env.APP_URL ?? 'http://localhost:3000';
+import { currentTarget } from '@/configs/targets.js';
+
+const baseURL = currentTarget().appUrl;
 const testUser = process.env.APP_USER ?? 'user@example.com';
 const testPass = process.env.APP_PASS ?? 'password123';
 const testTenantIdentifier = process.env.APP_TENANT_IDENTIFIER ?? process.env.APP_TENANT ?? '';
