@@ -78,7 +78,7 @@ If `APP_URL` is missing, the job fails early with a clear error (avoids `localho
 4. Open the run → download **playwright-report-…** only if the Slack **Reports** link is missing (HTML under `reports/html`). When upload succeeds, open **Open report** in Slack instead.
 5. If `SLACK_WEBHOOK_URL` is set **and** `xlm_slack_notify`/`XLM_SLACK_NOTIFY` is not `off`, a summary is posted after every run. Logic: [`scripts/slack-e2e-notify.sh`](../scripts/slack-e2e-notify.sh).
 
-**Slack message includes:** colored sidebar (green / red / amber / grey), pass-rate bar (`████░░`), test counts, duration from JUnit, one monospace **Test cases** list for both pass and fail, target host, project, branch, and who triggered the run. Each `TC03` in that list, pass or fail, links to that test in the HTML report (`index.html#?testId=...`). The list is split into short blocks so Slack does not cut it off mid-line. The **Reports** field is added only after `reports/html/index.html` is uploaded to R2. The result color follows the test step, so a missing report does not by itself turn a green run red in Slack.
+**Slack message includes:** colored sidebar (green / red / amber / grey), pass-rate bar (`████░░`), test counts, duration from JUnit, one monospace **Test cases** block for both pass and fail, target host, project, branch, and who triggered the run. When a test fails, that block includes the failure line and a **Failed tests** list whose `TC` code links to that test in the HTML report. The **Reports** field is added only after `reports/html/index.html` is uploaded to R2. The result color follows the test step, so a missing report does not by itself turn a green run red in Slack.
 
 ### Test Slack webhook (one-off)
 

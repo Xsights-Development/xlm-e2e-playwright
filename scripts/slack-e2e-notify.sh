@@ -114,30 +114,44 @@ PAYLOAD=$(jq -n \
           }
         ]
         + if ($rows | length) > 0 then
-            [{type: "section", text: {type: "mrkdwn", text: "*Test cases*"}}]
-            + (
-                [$rows | to_entries | group_by(.key / 10 | floor)[] | map(.value)]
-                | map({
-                    type: "rich_text",
-                    elements: map(
-                      {
-                        type: "rich_text_section",
-                        elements: (
-                          (if .mark != "" then [{type: "text", text: (.mark + " "), style: {code: true}}] else [] end)
-                          + (
-                              if .url != "" then
-                                [{type: "link", url: .url, text: .code, style: {code: true}}]
-                              else
-                                [{type: "text", text: .code, style: {code: true}}]
-                              end
-                            )
-                          + (if .rest != "" then [{type: "text", text: .rest, style: {code: true}}] else [] end)
-                        )
-                      }
-                    )
-                  })
-              )
+            [{
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: (
+                  "*Test cases*\n```\n"
+                  + ($rows | map(
+                      (if .mark != "" then .mark + " " else "" end)
+                      + .code + .rest
+                      + (if (.detail // "") != "" then " — " + .detail else "" end)
+                    ) | join("\n"))
+                  + "\n```"
+                )
+              }
+            }]
           else [] end
+        + (
+            if ([$rows[] | select(.mark == "❌")] | length) > 0 then
+              [{
+                type: "section",
+                text: {
+                  type: "mrkdwn",
+                  text: (
+                    "*Failed tests*\n"
+                    + (
+                        [$rows[] | select(.mark == "❌")]
+                        | map(
+                            "❌ "
+                            + (if .url != "" then "<" + .url + "|" + .code + ">" else .code end)
+                            + .rest
+                          )
+                        | join("\n")
+                      )
+                  )
+                }
+              }]
+            else [] end
+          )
         + [{type: "context", elements: [{type: "mrkdwn", text: $footer}]}]
       )
     }]

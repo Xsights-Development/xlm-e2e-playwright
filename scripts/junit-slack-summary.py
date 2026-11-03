@@ -32,8 +32,28 @@ def display_name(raw: str) -> str:
     return name
 
 
-def case_row(title: str, failed: bool, test_id: str, report_url: str, skipped: bool = False) -> dict:
-    """One Slack line. Pass and fail share the shape. Both link when a report URL exists."""
+def failure_detail(node: ET.Element | None) -> str:
+    if node is None:
+        return ""
+    msg = (node.attrib.get("message") or node.text or "").strip()
+    if not msg:
+        return ""
+    line = re.split(r"[\r\n]+", msg)[0].strip()
+    line = re.sub(r"\s+", " ", line)
+    if len(line) > 140:
+        line = line[:137] + "…"
+    return line
+
+
+def case_row(
+    title: str,
+    failed: bool,
+    test_id: str,
+    report_url: str,
+    skipped: bool = False,
+    detail: str = "",
+) -> dict:
+    """Pass and fail share a monospace line. Only failures carry a report link."""
     title = display_name(title)
     if skipped:
         mark = "⏭"
@@ -47,9 +67,15 @@ def case_row(title: str, failed: bool, test_id: str, report_url: str, skipped: b
         code = title
         rest = ""
     url = ""
-    if report_url and test_id and not skipped:
+    if failed and report_url and test_id and not skipped:
         url = report_url.split("#", 1)[0] + "#?testId=" + quote(test_id, safe="")
-    return {"mark": mark, "code": code, "rest": rest, "url": url}
+    return {
+        "mark": mark,
+        "code": code,
+        "rest": rest,
+        "url": url,
+        "detail": detail if failed else "",
+    }
 
 
 def cap_rows(rows: list[dict], report_url: str) -> list[dict]:
@@ -68,10 +94,25 @@ def cases_from_junit(root: ET.Element) -> list[dict]:
         title = tc.attrib.get("name") or "unknown"
         if tc.find("skipped") is not None:
             rows.append(case_row(title, False, "", "", skipped=True))
-        else:
-            failed = tc.find("failure") is not None or tc.find("error") is not None
-            rows.append(case_row(title, failed, "", ""))
+            continue
+        failure = tc.find("failure")
+        if failure is None:
+            failure = tc.find("error")
+        rows.append(case_row(title, failure is not None, "", "", detail=failure_detail(failure)))
     return rows
+
+
+def details_by_title(root: ET.Element) -> dict[str, list[str]]:
+    grouped: dict[str, list[str]] = {}
+    for tc in root.iter("testcase"):
+        failure = tc.find("failure")
+        if failure is None:
+            failure = tc.find("error")
+        if failure is None:
+            continue
+        title = display_name(tc.attrib.get("name") or "unknown")
+        grouped.setdefault(title, []).append(failure_detail(failure))
+    return grouped
 
 
 def walk_specs(node: dict, specs: list[dict]) -> None:
@@ -108,6 +149,18 @@ def cases_from_results(report: dict, report_url: str) -> list[dict]:
     return rows
 
 
+def apply_junit_details(rows: list[dict], details: dict[str, list[str]]) -> None:
+    pending = {title: list(lines) for title, lines in details.items()}
+    for row in rows:
+        if row["mark"] != "❌":
+            continue
+        title = f"{row['code']}{row['rest']}"
+        lines = pending.get(title) or []
+        if not lines:
+            continue
+        row["detail"] = lines.pop(0)
+
+
 def main() -> None:
     junit_path = sys.argv[1] if len(sys.argv) > 1 else "reports/junit.xml"
     results_path = sys.argv[2] if len(sys.argv) > 2 else ""
@@ -121,8 +174,10 @@ def main() -> None:
         "rows": [],
     }
     case_rows: list[dict] = []
+    junit_details: dict[str, list[str]] = {}
     try:
         root = ET.parse(junit_path).getroot()
+        junit_details = details_by_title(root)
         suites = list(root.iter("testsuite"))
         tests = sum(int(s.attrib.get("tests", 0)) for s in suites)
         failures = sum(int(s.attrib.get("failures", 0)) for s in suites)
@@ -148,6 +203,7 @@ def main() -> None:
                 report = json.load(handle)
             linked = cases_from_results(report, report_url)
             if linked:
+                apply_junit_details(linked, junit_details)
                 case_rows = linked
         except Exception:
             pass
